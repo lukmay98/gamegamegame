@@ -9,7 +9,7 @@ import { PlayersSheet } from "@/components/players-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { Sheet } from "@/components/sheet";
 import { ErrorBox, Page, Spinner, TopBar } from "@/components/ui";
-import { leaveSession, saveEntry, setSessionStatus } from "@/lib/actions";
+import { deleteSession, leaveSession, saveEntry, setSessionStatus } from "@/lib/actions";
 import { GAMES, type Entry, type GameId, type Player, type Round } from "@/lib/games";
 import { saveLastName, useLastName } from "@/lib/last-name";
 import { ensureSignedIn, errorText, supabase } from "@/lib/supabase";
@@ -277,7 +277,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
           ) : (
             <button className="btn btn-ghost justify-start" onClick={() => confirm("Session beenden? Danach ist sie nur noch lesbar.") && void setSessionStatus(session.id, "finished").then(() => { setMenu(false); void refresh(); })}>🏁 Session beenden</button>
           )}
-          {me && (
+          {me && session.created_by !== me && (
             <button
               className="btn btn-ghost justify-start"
               style={{ color: "var(--color-accent)" }}
@@ -287,6 +287,21 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
               }}
             >
               🚪 Session verlassen
+            </button>
+          )}
+          {me && session.created_by === me && (
+            <button
+              className="btn btn-ghost justify-start"
+              style={{ color: "var(--color-accent)" }}
+              onClick={() => {
+                if (!confirm(`„${session.name}“ endgültig löschen? Die Session verschwindet für alle Mitspieler und kann nicht wiederhergestellt werden.`)) return;
+                deleteSession(session.id).then(
+                  () => router.push("/"),
+                  (e) => setSaveError(errorText(e)),
+                );
+              }}
+            >
+              🗑️ Session für alle löschen
             </button>
           )}
         </div>

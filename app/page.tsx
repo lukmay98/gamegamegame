@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ErrorBox, Page, TopBar } from "@/components/ui";
 import { GAMES, type Session } from "@/lib/games";
+import { deleteSession, leaveSession } from "@/lib/actions";
 import { ensureSignedIn, errorText, supabase } from "@/lib/supabase";
 
 export default function Home() {
@@ -12,10 +13,29 @@ export default function Home() {
   const [code, setCode] = useState("");
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [me, setMe] = useState<string | null>(null);
+
+  async function remove(s: Session) {
+    if (!me) return;
+    const host = s.created_by === me;
+    const ok = confirm(
+      host
+        ? `„${s.name}“ endgültig löschen? Die Session verschwindet für alle Mitspieler und kann nicht wiederhergestellt werden.`
+        : `„${s.name}“ aus deiner Liste entfernen? Mit dem Code ${s.code} kannst du jederzeit wieder beitreten.`,
+    );
+    if (!ok) return;
+    try {
+      if (host) await deleteSession(s.id);
+      else await leaveSession(s.id, me);
+      setSessions((all) => (all ?? []).filter((x) => x.id !== s.id));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
 
   useEffect(() => {
     (async () => {
-      await ensureSignedIn();
+      setMe(await ensureSignedIn());
       const { data, error } = await supabase()
         .from("sessions")
         .select("*")
@@ -84,8 +104,8 @@ export default function Home() {
         ) : (
           <ul className="flex flex-col gap-2">
             {sessions.map((s) => (
-              <li key={s.id}>
-                <Link href={`/s/${s.code}`} className="card px-4 py-3 flex items-center gap-3 hover:border-[var(--color-ink)]">
+              <li key={s.id} className="flex items-stretch gap-2">
+                <Link href={`/s/${s.code}`} className="card flex-1 min-w-0 px-4 py-3 flex items-center gap-3 hover:border-[var(--color-ink)]">
                   <span className="text-2xl" aria-hidden>{GAMES[s.game]?.emoji}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block font-semibold truncate">{s.name}</span>
@@ -99,6 +119,17 @@ export default function Home() {
                     <span className="chip" style={{ background: "var(--color-surface-soft)", color: "var(--color-text-muted)" }}>beendet</span>
                   )}
                 </Link>
+                <button
+                  className="card shrink-0 w-12 flex items-center justify-center hover:border-[var(--color-accent)]"
+                  style={{ color: "var(--color-text-muted)" }}
+                  aria-label={s.created_by === me ? `${s.name} löschen` : `${s.name} aus Liste entfernen`}
+                  title={s.created_by === me ? "Für alle löschen" : "Aus meiner Liste entfernen"}
+                  onClick={() => void remove(s)}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+                  </svg>
+                </button>
               </li>
             ))}
           </ul>

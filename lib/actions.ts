@@ -77,3 +77,10 @@ export async function leaveSession(sessionId: string, userId: string) {
   const { error } = await (await db()).from("session_members").delete().eq("session_id", sessionId).eq("user_id", userId);
   if (error) throw error;
 }
+
+/** Session für alle löschen (nur wer sie angelegt hat; per RLS abgesichert). */
+export async function deleteSession(sessionId: string) {
+  const { data, error } = await (await db()).from("sessions").delete().eq("id", sessionId).select("id");
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("Nur wer die Session angelegt hat, kann sie für alle löschen.");
+}
