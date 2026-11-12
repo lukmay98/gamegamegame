@@ -5,6 +5,8 @@ gespielt wird am Tisch. Eine Person startet eine Session, die anderen treten mit
 6-stelligen Code oder per QR-Code bei, und alle sehen den Spielstand live auf
 ihrem Handy. **Niemand braucht ein Konto.**
 
+**Live:** https://gamegamegame.vercel.app
+
 Stack wie beim Golf-Projekt: Next.js 16 + Tailwind 4 + Supabase (Postgres, Auth,
 Realtime) auf Vercel.
 
