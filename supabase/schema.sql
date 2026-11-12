@@ -23,7 +23,7 @@ create table if not exists sessions (
   game text not null check (game in ('ftn', 'free')),
   config jsonb not null default '{}'::jsonb,
   status text not null default 'active' check (status in ('active', 'finished')),
-  created_by uuid not null default auth.uid() references auth.users(id) on delete set null,
+  created_by uuid default auth.uid() references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   finished_at timestamptz
 );
@@ -279,6 +279,8 @@ grant execute on function create_session(text, text, jsonb, text[]) to authentic
 grant execute on function join_session(text, text) to authenticated;
 grant execute on function session_preview(text) to authenticated;
 grant execute on function ping() to anon, authenticated;
+revoke all on function is_member(uuid) from public, anon;
+grant execute on function is_member(uuid) to authenticated;
 
 -- ─────────────────────────────────────────────────────────────
 -- REALTIME: Änderungen live an alle Mitglieder schicken
