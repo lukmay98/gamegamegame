@@ -8,6 +8,7 @@ import { FtnBoard } from "@/components/ftn-board";
 import { PlayersSheet } from "@/components/players-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { Sheet } from "@/components/sheet";
+import { LegalLink } from "@/components/legal-link";
 import { ErrorBox, Page, Spinner, TopBar } from "@/components/ui";
 import { deleteSession, leaveSession, saveEntry, setSessionStatus } from "@/lib/actions";
 import { GAMES, type Entry, type GameId, type Player, type Round } from "@/lib/games";
@@ -158,6 +159,7 @@ function JoinGate({ code, preview, onJoined }: { code: string; preview: Preview;
         <button className="btn btn-ghost w-full mt-3" disabled={busy} onClick={() => join(null)}>
           Nur zuschauen / mitschreiben
         </button>
+        <LegalLink />
       </Page>
     </>
   );

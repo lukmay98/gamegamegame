@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LegalLink } from "@/components/legal-link";
 import { ErrorBox, Page, TopBar } from "@/components/ui";
 import { GAMES, type Session } from "@/lib/games";
 import { deleteSession, leaveSession } from "@/lib/actions";
@@ -134,6 +135,7 @@ export default function Home() {
             ))}
           </ul>
         )}
+        <LegalLink />
       </Page>
     </>
   );
