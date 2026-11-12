@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "./supabase";
+import { db } from "./supabase";
 import type { Entry } from "./games/types";
 
 type EntryPatch = Pick<Entry, "round_id" | "player_id" | "session_id"> &
@@ -8,7 +8,7 @@ type EntryPatch = Pick<Entry, "round_id" | "player_id" | "session_id"> &
 
 /** Ein Feld (Ansage, Stiche oder Punkte) eines Spielers in einer Runde setzen. */
 export async function saveEntry(patch: EntryPatch) {
-  const { error } = await supabase()
+  const { error } = await (await db())
     .from("entries")
     .upsert({ ...patch, updated_at: new Date().toISOString() }, { onConflict: "round_id,player_id" });
   if (error) throw error;
@@ -17,7 +17,7 @@ export async function saveEntry(patch: EntryPatch) {
 export async function saveEntries(patches: EntryPatch[]) {
   if (patches.length === 0) return;
   const now = new Date().toISOString();
-  const { error } = await supabase()
+  const { error } = await (await db())
     .from("entries")
     .upsert(patches.map((p) => ({ ...p, updated_at: now })), { onConflict: "round_id,player_id" });
   if (error) throw error;
@@ -28,7 +28,7 @@ export async function saveEntries(patches: EntryPatch[]) {
  * das andere bekommt einen Duplikat-Fehler, den wir ignorieren.
  */
 export async function createRound(sessionId: string, roundNumber: number, cards: number | null, dealerId: string | null) {
-  const { data, error } = await supabase()
+  const { data, error } = await (await db())
     .from("rounds")
     .insert({ session_id: sessionId, round_number: roundNumber, cards, dealer_player_id: dealerId })
     .select("id")
@@ -38,27 +38,27 @@ export async function createRound(sessionId: string, roundNumber: number, cards:
 }
 
 export async function deleteRound(roundId: string) {
-  const { error } = await supabase().from("rounds").delete().eq("id", roundId);
+  const { error } = await (await db()).from("rounds").delete().eq("id", roundId);
   if (error) throw error;
 }
 
 export async function addPlayer(sessionId: string, name: string, seat: number) {
-  const { error } = await supabase().from("players").insert({ session_id: sessionId, name: name.trim(), seat });
+  const { error } = await (await db()).from("players").insert({ session_id: sessionId, name: name.trim(), seat });
   if (error) throw error;
 }
 
 export async function renamePlayer(playerId: string, name: string) {
-  const { error } = await supabase().from("players").update({ name: name.trim() }).eq("id", playerId);
+  const { error } = await (await db()).from("players").update({ name: name.trim() }).eq("id", playerId);
   if (error) throw error;
 }
 
 export async function removePlayer(playerId: string) {
-  const { error } = await supabase().from("players").delete().eq("id", playerId);
+  const { error } = await (await db()).from("players").delete().eq("id", playerId);
   if (error) throw error;
 }
 
 export async function swapSeats(a: { id: string; seat: number }, b: { id: string; seat: number }) {
-  const sb = supabase();
+  const sb = await db();
   const r1 = await sb.from("players").update({ seat: b.seat }).eq("id", a.id);
   if (r1.error) throw r1.error;
   const r2 = await sb.from("players").update({ seat: a.seat }).eq("id", b.id);
@@ -66,7 +66,7 @@ export async function swapSeats(a: { id: string; seat: number }, b: { id: string
 }
 
 export async function setSessionStatus(sessionId: string, status: "active" | "finished") {
-  const { error } = await supabase()
+  const { error } = await (await db())
     .from("sessions")
     .update({ status, finished_at: status === "finished" ? new Date().toISOString() : null })
     .eq("id", sessionId);
@@ -74,6 +74,6 @@ export async function setSessionStatus(sessionId: string, status: "active" | "fi
 }
 
 export async function leaveSession(sessionId: string, userId: string) {
-  const { error } = await supabase().from("session_members").delete().eq("session_id", sessionId).eq("user_id", userId);
+  const { error } = await (await db()).from("session_members").delete().eq("session_id", sessionId).eq("user_id", userId);
   if (error) throw error;
 }
