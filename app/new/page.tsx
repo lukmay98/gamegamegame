@@ -42,12 +42,12 @@ export default function NewSession() {
   const names = useMemo(() => players.map((p) => p.trim()).filter(Boolean), [players]);
   const duplicate = new Set(names.map((n) => n.toLowerCase())).size !== names.length;
   const playerCount = Math.max(names.length, players.length, 1);
-  const maxPossible = Math.max(1, Math.floor(52 / playerCount));
+  const maxPossible = maxCardsFor(playerCount);
 
   // Kartenzahl folgt der Spielerzahl, solange sie nicht manuell geändert wurde
   const ftn: FtnConfig = {
     ...ftnBase,
-    maxCards: maxOverride != null ? Math.min(maxOverride, maxPossible) : maxCardsFor(playerCount),
+    maxCards: maxOverride != null ? Math.min(maxOverride, maxPossible) : maxPossible,
   };
 
   const plan = cardPlan(ftn);

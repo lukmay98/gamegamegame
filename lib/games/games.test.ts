@@ -37,7 +37,8 @@ test("card plan up-down", () => {
 });
 
 test("max cards", () => {
-  assert.equal(maxCardsFor(4), 10);
+  assert.equal(maxCardsFor(4), 13);
+  assert.equal(maxCardsFor(5), 10);
   assert.equal(maxCardsFor(6), 8);
   assert.equal(maxCardsFor(13), 4);
 });

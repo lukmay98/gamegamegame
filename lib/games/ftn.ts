@@ -32,10 +32,10 @@ export function defaultFtnConfig(playerCount: number): FtnConfig {
   };
 }
 
-/** Größte sinnvolle Kartenzahl bei einem 52er-Blatt (max. 10 als Standard). */
+/** Größtmögliche Kartenzahl pro Spieler bei einem 52er-Blatt. */
 export function maxCardsFor(playerCount: number, deckSize = 52): number {
-  if (playerCount < 1) return 10;
-  return Math.max(1, Math.min(10, Math.floor(deckSize / playerCount)));
+  if (playerCount < 1) return deckSize;
+  return Math.max(1, Math.floor(deckSize / playerCount));
 }
 
 /** Kartenplan für die ganze Partie, z. B. 1,2,3,…,max,…,2,1 */
