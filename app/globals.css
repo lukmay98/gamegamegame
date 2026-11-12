@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #f4f1ea;
+  --color-surface: #ffffff;
+  --color-surface-soft: #ece7dc;
+  --color-ink: #1c2540;
+  --color-ink-soft: #2e3a5c;
+  --color-text: #1b1f2a;
+  --color-text-muted: #646a78;
+  --color-border: #dcd5c6;
+  --color-accent: #c63d32;
+  --color-accent-soft: #f8e1dd;
+  --color-good: #2f7a4f;
+  --color-good-soft: #dff0e5;
+  --color-gold: #c9962b;
+  --font-display: var(--font-bricolage, ui-sans-serif);
+  --font-body: var(--font-inter, ui-sans-serif);
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: white;
+}
+
+/* Wiederverwendbare Bausteine */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 80ms ease, opacity 120ms ease;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+.btn-primary { background: var(--color-ink); color: white; }
+.btn-accent { background: var(--color-accent); color: white; }
+.btn-ghost { background: transparent; color: var(--color-ink); border: 1px solid var(--color-border); }
+.btn-soft { background: var(--color-surface-soft); color: var(--color-ink); }
+
+.input {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem; /* ≥16px verhindert Zoom auf iOS */
+  outline: none;
+}
+.input:focus { border-color: var(--color-ink); box-shadow: 0 0 0 3px rgb(28 37 64 / 0.12); }
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

@@ -1,0 +1,79 @@
+"use client";
+
+import { supabase } from "./supabase";
+import type { Entry } from "./games/types";
+
+type EntryPatch = Pick<Entry, "round_id" | "player_id" | "session_id"> &
+  Partial<Pick<Entry, "bid" | "tricks" | "points">>;
+
+/** Ein Feld (Ansage, Stiche oder Punkte) eines Spielers in einer Runde setzen. */
+export async function saveEntry(patch: EntryPatch) {
+  const { error } = await supabase()
+    .from("entries")
+    .upsert({ ...patch, updated_at: new Date().toISOString() }, { onConflict: "round_id,player_id" });
+  if (error) throw error;
+}
+
+export async function saveEntries(patches: EntryPatch[]) {
+  if (patches.length === 0) return;
+  const now = new Date().toISOString();
+  const { error } = await supabase()
+    .from("entries")
+    .upsert(patches.map((p) => ({ ...p, updated_at: now })), { onConflict: "round_id,player_id" });
+  if (error) throw error;
+}
+
+/**
+ * Neue Runde anlegen. Wenn zwei Geräte gleichzeitig tippen, gewinnt eines;
+ * das andere bekommt einen Duplikat-Fehler, den wir ignorieren.
+ */
+export async function createRound(sessionId: string, roundNumber: number, cards: number | null, dealerId: string | null) {
+  const { data, error } = await supabase()
+    .from("rounds")
+    .insert({ session_id: sessionId, round_number: roundNumber, cards, dealer_player_id: dealerId })
+    .select("id")
+    .single();
+  if (error && error.code !== "23505") throw error;
+  return (data?.id as string | undefined) ?? null;
+}
+
+export async function deleteRound(roundId: string) {
+  const { error } = await supabase().from("rounds").delete().eq("id", roundId);
+  if (error) throw error;
+}
+
+export async function addPlayer(sessionId: string, name: string, seat: number) {
+  const { error } = await supabase().from("players").insert({ session_id: sessionId, name: name.trim(), seat });
+  if (error) throw error;
+}
+
+export async function renamePlayer(playerId: string, name: string) {
+  const { error } = await supabase().from("players").update({ name: name.trim() }).eq("id", playerId);
+  if (error) throw error;
+}
+
+export async function removePlayer(playerId: string) {
+  const { error } = await supabase().from("players").delete().eq("id", playerId);
+  if (error) throw error;
+}
+
+export async function swapSeats(a: { id: string; seat: number }, b: { id: string; seat: number }) {
+  const sb = supabase();
+  const r1 = await sb.from("players").update({ seat: b.seat }).eq("id", a.id);
+  if (r1.error) throw r1.error;
+  const r2 = await sb.from("players").update({ seat: a.seat }).eq("id", b.id);
+  if (r2.error) throw r2.error;
+}
+
+export async function setSessionStatus(sessionId: string, status: "active" | "finished") {
+  const { error } = await supabase()
+    .from("sessions")
+    .update({ status, finished_at: status === "finished" ? new Date().toISOString() : null })
+    .eq("id", sessionId);
+  if (error) throw error;
+}
+
+export async function leaveSession(sessionId: string, userId: string) {
+  const { error } = await supabase().from("session_members").delete().eq("session_id", sessionId).eq("user_id", userId);
+  if (error) throw error;
+}
