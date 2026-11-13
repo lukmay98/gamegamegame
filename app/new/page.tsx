@@ -42,7 +42,7 @@ export default function NewSession() {
   const names = useMemo(() => players.map((p) => p.trim()).filter(Boolean), [players]);
   const duplicate = new Set(names.map((n) => n.toLowerCase())).size !== names.length;
   const playerCount = Math.max(names.length, players.length, 1);
-  const maxPossible = maxCardsFor(playerCount);
+  const maxPossible = maxCardsFor(playerCount, ftnBase.decks);
 
   // Kartenzahl folgt der Spielerzahl, solange sie nicht manuell geändert wurde
   const ftn: FtnConfig = {
@@ -140,10 +140,28 @@ export default function NewSession() {
 
         {game === "ftn" ? (
           <section className="card p-4 mt-6 flex flex-col gap-5">
+            <div>
+              <div className="label">Kartenspiele (je 52 Karten)</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`btn ${ftn.decks === d ? "btn-primary" : "btn-ghost"} !py-2 text-sm`}
+                    onClick={() => setFtn((c) => ({ ...c, decks: d }))}
+                  >
+                    {d} × 52
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Höchste Kartenzahl</div>
-                <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>max. {maxPossible} bei {playerCount} Spielern (52 Karten)</div>
+                <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  max. {maxPossible} bei {playerCount} Spielern ({ftn.decks * 52} Karten)
+                </div>
               </div>
               <Stepper
                 value={ftn.maxCards}
@@ -167,7 +185,17 @@ export default function NewSession() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs mt-2 tabular" style={{ color: "var(--color-text-muted)" }}>
+              {ftn.sequence !== "constant" && (
+                <div className="mt-3">
+                  <Toggle
+                    checked={ftn.peakTwice}
+                    onChange={(v) => setFtn((c) => ({ ...c, peakTwice: v }))}
+                    label="Höchste Runde zweimal spielen"
+                    hint={`Die Runde mit ${ftn.maxCards} Karten wird doppelt gespielt.`}
+                  />
+                </div>
+              )}
+              <p className="text-xs mt-3 tabular" style={{ color: "var(--color-text-muted)" }}>
                 {plan.length} Runden: {plan.join(" · ")}
               </p>
             </div>
@@ -202,6 +230,33 @@ export default function NewSession() {
                   <NumField label="Daneben: + pro Stich" value={ftn.scoring.missPerTrick} onChange={(v) => setScoring({ missPerTrick: v })} />
                 </div>
               </details>
+            </div>
+
+            <div>
+              <div className="label">Null-Ansage getroffen</div>
+              <div className="flex flex-wrap gap-2">
+                {[null, 5, 10, 20].map((v) => (
+                  <button
+                    key={String(v)}
+                    type="button"
+                    className={`btn ${ftn.zeroHit === v ? "btn-primary" : "btn-ghost"} !py-2 !px-3 text-sm`}
+                    onClick={() => setFtn((c) => ({ ...c, zeroHit: v }))}
+                  >
+                    {v == null ? `Normal (${ftn.scoring.hitBase})` : `${v} Punkte`}
+                  </button>
+                ))}
+                <input
+                  className="input !w-24 !py-2 text-sm tabular"
+                  inputMode="numeric"
+                  placeholder="eigene"
+                  aria-label="Eigene Punkte für Null-Ansage"
+                  value={ftn.zeroHit != null && ![5, 10, 20].includes(ftn.zeroHit) ? ftn.zeroHit : ""}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10);
+                    setFtn((c) => ({ ...c, zeroHit: Number.isFinite(n) ? n : null }));
+                  }}
+                />
+              </div>
             </div>
 
             <Toggle

@@ -51,8 +51,9 @@ create table if not exists rounds (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references sessions(id) on delete cascade,
   round_number int not null check (round_number >= 1),
-  cards int check (cards between 1 and 60),          -- nur FTN: Karten pro Spieler
+  cards int check (cards between 1 and 60),          -- nur FTN: Karten pro Spieler          -- nur FTN: Karten pro Spieler
   dealer_player_id uuid references players(id) on delete set null,
+  phase text not null default 'bidding' check (phase in ('bidding', 'playing', 'done')),
   created_at timestamptz not null default now(),
   unique (session_id, round_number)
 );
@@ -62,7 +63,8 @@ create table if not exists entries (
   player_id uuid not null references players(id) on delete cascade,
   session_id uuid not null references sessions(id) on delete cascade,
   bid int check (bid between 0 and 60),              -- FTN: angesagte Stiche
-  tricks int check (tricks between 0 and 60),        -- FTN: gemachte Stiche
+  tricks int check (tricks between 0 and 60),        -- FTN: gemachte Stiche (nur bei "daneben", wenn die Wertung sie braucht)
+  hit boolean,                                        -- FTN: true = getroffen, false = daneben, null = offen
   points int,                                         -- Freie Liste: Punkte der Runde
   updated_at timestamptz not null default now(),
   primary key (round_id, player_id)

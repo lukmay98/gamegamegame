@@ -175,13 +175,13 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
 
   // Optimistisch lokal setzen, dann speichern; Realtime gleicht danach ab.
   const saveFtn = useCallback(
-    (round: Round, player: Player, patch: Partial<Pick<Entry, "bid" | "tricks">>) => {
+    (round: Round, player: Player, patch: Partial<Pick<Entry, "bid" | "tricks" | "hit">>) => {
       setData((d) => {
         if (!d) return d;
         const idx = d.entries.findIndex((e) => e.round_id === round.id && e.player_id === player.id);
         const entries = [...d.entries];
         if (idx >= 0) entries[idx] = { ...entries[idx], ...patch };
-        else entries.push({ round_id: round.id, player_id: player.id, session_id: round.session_id, bid: null, tricks: null, points: null, ...patch });
+        else entries.push({ round_id: round.id, player_id: player.id, session_id: round.session_id, bid: null, tricks: null, hit: null, points: null, ...patch });
         return { ...d, entries };
       });
       saveEntry({ round_id: round.id, player_id: player.id, session_id: round.session_id, ...patch })
@@ -192,6 +192,21 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         });
     },
     [setData, refresh],
+  );
+
+  const patchLocal = useCallback(
+    (roundId: string, roundPatch: Partial<Round>, entryPatch?: (e: Entry) => Entry) => {
+      setData((d) =>
+        d
+          ? {
+              ...d,
+              rounds: d.rounds.map((r) => (r.id === roundId ? { ...r, ...roundPatch } : r)),
+              entries: entryPatch ? d.entries.map((e) => (e.round_id === roundId ? entryPatch(e) : e)) : d.entries,
+            }
+          : d,
+      );
+    },
+    [setData],
   );
 
   if (error && !data) {
@@ -254,7 +269,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         {(saveError || error) && <div className="mb-3"><ErrorBox>{saveError ?? error}</ErrorBox></div>}
 
         {session.game === "ftn" ? (
-          <FtnBoard live={data} me={me} save={saveFtn} refresh={() => void refresh()} />
+          <FtnBoard live={data} me={me} save={saveFtn} refresh={() => void refresh()} onOpenPlayers={() => setPlayersOpen(true)} patchLocal={patchLocal} />
         ) : (
           <FreeBoard live={data} me={me} refresh={() => void refresh()} />
         )}

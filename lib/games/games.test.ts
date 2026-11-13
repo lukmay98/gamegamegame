@@ -4,14 +4,15 @@ import {
   biddingOrder,
   cardPlan,
   cardsForRound,
-  dealerForRound,
   defaultFtnConfig,
+  entryPoints,
   forbiddenDealerBid,
   ftnTotals,
   FTN_PRESETS,
   maxCardsFor,
-  roundState,
-  scoreFtn,
+  needsTricks,
+  nextDealer,
+  normalizeFtnConfig,
 } from "./ftn.ts";
 import { freeTotals, targetReached } from "./free.ts";
 import { rank } from "./ranking.ts";
@@ -19,16 +20,19 @@ import type { Entry, Player, Round } from "./types.ts";
 
 const P = (id: string, seat: number): Player => ({ id, seat, name: id, session_id: "s", user_id: null });
 const players = [P("a", 1), P("b", 2), P("c", 3)];
-const R = (id: string, n: number, cards: number | null = null): Round => ({
-  id, round_number: n, cards, session_id: "s", dealer_player_id: null, created_at: "",
+const R = (id: string, n: number, cards: number | null = null, phase: Round["phase"] = "done"): Round => ({
+  id, round_number: n, cards, session_id: "s", dealer_player_id: null, phase, created_at: "",
 });
 const E = (round_id: string, player_id: string, x: Partial<Entry>): Entry => ({
-  round_id, player_id, session_id: "s", bid: null, tricks: null, points: null, ...x,
+  round_id, player_id, session_id: "s", bid: null, tricks: null, hit: null, points: null, ...x,
 });
 
-test("card plan up-down", () => {
+test("card plan", () => {
   assert.deepEqual(cardPlan({ maxCards: 4, sequence: "up-down" }), [1, 2, 3, 4, 3, 2, 1]);
+  assert.deepEqual(cardPlan({ maxCards: 4, sequence: "up-down", peakTwice: true }), [1, 2, 3, 4, 4, 3, 2, 1]);
   assert.deepEqual(cardPlan({ maxCards: 3, sequence: "down" }), [3, 2, 1]);
+  assert.deepEqual(cardPlan({ maxCards: 3, sequence: "down", peakTwice: true }), [3, 3, 2, 1]);
+  assert.deepEqual(cardPlan({ maxCards: 3, sequence: "up", peakTwice: true }), [1, 2, 3, 3]);
   assert.deepEqual(cardPlan({ maxCards: 1, sequence: "up-down" }), [1]);
   const cfg = { ...defaultFtnConfig(4), maxCards: 3 };
   assert.equal(cardsForRound(cfg, 3), 3);
@@ -36,24 +40,37 @@ test("card plan up-down", () => {
   assert.equal(cardsForRound(cfg, 99), 1);
 });
 
-test("max cards", () => {
+test("max cards with decks", () => {
   assert.equal(maxCardsFor(4), 13);
   assert.equal(maxCardsFor(5), 10);
-  assert.equal(maxCardsFor(6), 8);
-  assert.equal(maxCardsFor(13), 4);
+  assert.equal(maxCardsFor(6, 2), 17);
+  assert.equal(maxCardsFor(12, 3), 13);
 });
 
-test("scoring presets", () => {
-  const c = FTN_PRESETS.classic.scoring;
-  assert.equal(scoreFtn(0, 0, c), 10);
-  assert.equal(scoreFtn(3, 3, c), 13);
-  assert.equal(scoreFtn(3, 1, c), 0);
-  const w = FTN_PRESETS.wizard.scoring;
-  assert.equal(scoreFtn(2, 2, w), 40);
-  assert.equal(scoreFtn(2, 5, w), -30);
-  const e = FTN_PRESETS.everyTrick.scoring;
-  assert.equal(scoreFtn(2, 3, e), 3);
-  assert.equal(scoreFtn(2, 2, e), 12);
+test("normalize old config", () => {
+  const c = normalizeFtnConfig({ maxCards: 7, sequence: "up" });
+  assert.equal(c.decks, 1);
+  assert.equal(c.peakTwice, false);
+  assert.equal(c.zeroHit, null);
+});
+
+test("entry points", () => {
+  const classic = defaultFtnConfig(4);
+  assert.equal(needsTricks(classic.scoring), false);
+  assert.equal(entryPoints({ bid: 0, hit: true, tricks: null }, classic), 10);
+  assert.equal(entryPoints({ bid: 3, hit: true, tricks: null }, classic), 13);
+  assert.equal(entryPoints({ bid: 3, hit: false, tricks: null }, classic), 0);
+  assert.equal(entryPoints({ bid: 3, hit: null, tricks: null }, classic), null);
+  const zero20 = { ...classic, zeroHit: 20 };
+  assert.equal(entryPoints({ bid: 0, hit: true, tricks: null }, zero20), 20);
+  assert.equal(entryPoints({ bid: 1, hit: true, tricks: null }, zero20), 11);
+  const wizard = { ...classic, scoring: FTN_PRESETS.wizard.scoring };
+  assert.equal(needsTricks(wizard.scoring), true);
+  assert.equal(entryPoints({ bid: 2, hit: true, tricks: null }, wizard), 40);
+  assert.equal(entryPoints({ bid: 2, hit: false, tricks: 5 }, wizard), -30);
+  assert.equal(entryPoints({ bid: 2, hit: false, tricks: null }, wizard), null);
+  const every = { ...classic, scoring: FTN_PRESETS.everyTrick.scoring };
+  assert.equal(entryPoints({ bid: 2, hit: false, tricks: 3 }, every), 3);
 });
 
 test("dealer rule", () => {
@@ -62,29 +79,28 @@ test("dealer rule", () => {
   assert.equal(forbiddenDealerBid(3, [0, 0]), 3);
 });
 
-test("dealer rotation and bidding order", () => {
-  assert.equal(dealerForRound(players, 1)?.id, "a");
-  assert.equal(dealerForRound(players, 4)?.id, "a");
-  assert.equal(dealerForRound(players, 2)?.id, "b");
+test("next dealer and bidding order", () => {
+  assert.equal(nextDealer(players, null)?.id, "a");
+  assert.equal(nextDealer(players, "a")?.id, "b");
+  assert.equal(nextDealer(players, "c")?.id, "a");
   assert.deepEqual(biddingOrder(players, "b").map((p) => p.id), ["c", "a", "b"]);
 });
 
-test("round state and totals", () => {
+test("totals only count finished rounds", () => {
   const cfg = defaultFtnConfig(3);
-  const r1 = R("r1", 1, 1);
-  const r2 = R("r2", 2, 2);
+  const r1 = R("r1", 1, 1, "done");
+  const r2 = R("r2", 2, 2, "playing");
   const entries = [
-    E("r1", "a", { bid: 1, tricks: 1 }),
-    E("r1", "b", { bid: 0, tricks: 0 }),
-    E("r1", "c", { bid: 1, tricks: 0 }),
-    E("r2", "a", { bid: 1 }),
+    E("r1", "a", { bid: 1, hit: true }),
+    E("r1", "b", { bid: 0, hit: true }),
+    E("r1", "c", { bid: 1, hit: false }),
+    E("r2", "a", { bid: 1, hit: false }),
   ];
-  assert.equal(roundState(r1, players, entries), "done");
-  assert.equal(roundState(r2, players, entries), "bidding");
   const t = ftnTotals(cfg, players, [r1, r2], entries);
   assert.deepEqual(t.totals, { a: 11, b: 10, c: 0 });
   assert.equal(t.perRound.r2.a, null);
   assert.equal(t.hits.a, 1);
+  assert.equal(t.played.c, 1);
 });
 
 test("free totals, target, ranking", () => {

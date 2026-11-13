@@ -84,3 +84,26 @@ export async function deleteSession(sessionId: string) {
   if (error) throw error;
   if (!data || data.length === 0) throw new Error("Nur wer die Session angelegt hat, kann sie für alle löschen.");
 }
+
+export async function updateRound(roundId: string, patch: { phase?: "bidding" | "playing" | "done"; dealer_player_id?: string | null }) {
+  const { error } = await (await db()).from("rounds").update(patch).eq("id", roundId);
+  if (error) throw error;
+}
+
+/** Ansagen wieder öffnen: Runde zurück auf "bidding", Treffer-Markierungen löschen. */
+export async function reopenBids(roundId: string) {
+  const sb = await db();
+  const r1 = await sb.from("entries").update({ hit: null, tricks: null }).eq("round_id", roundId);
+  if (r1.error) throw r1.error;
+  const r2 = await sb.from("rounds").update({ phase: "bidding" }).eq("id", roundId);
+  if (r2.error) throw r2.error;
+}
+
+/** Runde abschließen: alle nicht als "daneben" markierten Ansagen zählen als getroffen. */
+export async function finishRound(roundId: string) {
+  const sb = await db();
+  const r1 = await sb.from("entries").update({ hit: true }).eq("round_id", roundId).is("hit", null).not("bid", "is", null);
+  if (r1.error) throw r1.error;
+  const r2 = await sb.from("rounds").update({ phase: "done" }).eq("id", roundId);
+  if (r2.error) throw r2.error;
+}

@@ -28,6 +28,8 @@ export interface Round {
   round_number: number;
   cards: number | null;
   dealer_player_id: string | null;
+  /** bidding = Ansagen offen · playing = Ansagen bestätigt · done = Runde abgeschlossen */
+  phase: "bidding" | "playing" | "done";
   created_at: string;
 }
 
@@ -37,6 +39,8 @@ export interface Entry {
   session_id: string;
   bid: number | null;
   tricks: number | null;
+  /** FTN: true = Ansage getroffen, false = daneben, null = noch offen */
+  hit: boolean | null;
   points: number | null;
 }
 
@@ -62,6 +66,12 @@ export interface FtnConfig {
   scoringPreset: string;
   /** Geber darf nicht so ansagen, dass Summe der Ansagen = Karten */
   dealerRule: boolean;
+  /** Anzahl 52er-Kartenspiele (1–3) */
+  decks: number;
+  /** Höchste Runde zweimal spielen */
+  peakTwice: boolean;
+  /** Punkte für getroffene Null-Ansage; null = normale Treffer-Formel */
+  zeroHit: number | null;
 }
 
 // ── Freie Punkteliste ────────────────────────────────────────
