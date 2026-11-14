@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { createRound, deleteRound, finishRound, reopenBids, setGameStatus, updateRound } from "@/lib/actions";
 import type { Entry, FtnConfig, Game, Player, Round } from "@/lib/games";
 import {
-  DEALER_MODES,
   cardPlan,
   entryPoints,
   forbiddenDealerBid,
@@ -17,6 +16,7 @@ import type { LiveSession } from "@/lib/use-live-session";
 import { errorText } from "@/lib/supabase";
 import { Leaderboard } from "./leaderboard";
 import { ScoreGrid } from "./score-grid";
+import { Sheet } from "./sheet";
 import { ErrorBox, Stepper } from "./ui";
 
 type EntryPatch = Partial<Pick<Entry, "bid" | "tricks" | "hit">>;
@@ -30,7 +30,6 @@ export function FtnBoard({
   me,
   save,
   refresh,
-  onOpenPlayers,
   patchLocal,
   viewer = false,
 }: {
@@ -41,7 +40,6 @@ export function FtnBoard({
   me: string | null;
   save: SaveFn;
   refresh: () => void;
-  onOpenPlayers: () => void;
   patchLocal: PatchLocal;
 }) {
   const { session, players, rounds, entries } = live;
@@ -51,6 +49,12 @@ export function FtnBoard({
   const plan = useMemo(() => cardPlan(config), [config]);
   const totals = useMemo(() => ftnTotals(config, sortedPlayers, rounds, entries), [config, sortedPlayers, rounds, entries]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dealerOpen, setDealerOpen] = useState(false);
+  // Schreiber = wer den Spieltag angelegt hat (wird rot hervorgehoben)
+  const writerId = useMemo(
+    () => players.find((p) => p.user_id != null && p.user_id === session.created_by)?.id ?? null,
+    [players, session.created_by],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +92,14 @@ export function FtnBoard({
   }
 
   const finish = () => run(() => setGameStatus(game.id, "finished"));
+
+  function setDealer(round: Round, pid: string) {
+    setDealerOpen(false);
+    patchLocal(round.id, { dealer_player_id: pid });
+    void run(() => updateRound(round.id, { dealer_player_id: pid }));
+  }
+
+  const dealerName = sortedPlayers.find((p) => p.id === selected?.dealer_player_id)?.name;
 
   return (
     <>
@@ -136,8 +148,7 @@ export function FtnBoard({
           save={save}
           run={run}
           patchLocal={patchLocal}
-          onOpenPlayers={onOpenPlayers}
-          onDelete={selected.id === last?.id && !finished && !viewer ? removeLast : undefined}
+          writerId={writerId}
           onBackToCurrent={selected.id !== last?.id ? () => setSelectedId(null) : undefined}
         />
       )}
@@ -167,6 +178,7 @@ export function FtnBoard({
           totalSub={(p) => (totals.played[p.id] ? `${totals.hits[p.id]}/${totals.played[p.id]} ✓` : null)}
           selectedId={selected?.id ?? null}
           onSelect={setSelectedId}
+          highlightId={writerId}
           hint={`Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen${viewer ? "" : " oder Korrigieren"}.`}
           cell={(r, p) => {
             const e = entries.find((x) => x.round_id === r.id && x.player_id === p.id);
@@ -190,10 +202,45 @@ export function FtnBoard({
         />
       )}
 
-      {!viewer && !finished && rounds.length > 0 && !planDone && (
-        <button className="btn btn-ghost w-full mt-4 text-sm" onClick={() => confirm("Partie jetzt beenden?") && void finish()}>
-          Partie vorzeitig beenden
-        </button>
+      {!viewer && !finished && selected && (
+        <div className="flex flex-col gap-2 mt-4">
+          <div className="grid grid-cols-2 gap-2">
+            <button className="btn btn-ghost text-sm" onClick={() => setDealerOpen(true)}>
+              Geber{dealerName ? `: ${dealerName}` : ""} ändern
+            </button>
+            {selected.id === last?.id ? (
+              <button className="btn btn-ghost text-sm" onClick={() => void removeLast()}>
+                Runde {last.round_number} löschen
+              </button>
+            ) : (
+              <span />
+            )}
+          </div>
+          {!planDone && (
+            <button className="btn btn-ghost w-full text-sm" onClick={() => confirm("Partie jetzt beenden?") && void finish()}>
+              Partie vorzeitig beenden
+            </button>
+          )}
+        </div>
+      )}
+
+      {selected && (
+        <Sheet open={dealerOpen} onClose={() => setDealerOpen(false)} title={`Geber in Runde ${selected.round_number}`}>
+          <div className="grid grid-cols-2 gap-2">
+            {sortedPlayers.map((p) => {
+              const active = p.id === selected.dealer_player_id;
+              return (
+                <button
+                  key={p.id}
+                  className={`btn ${active ? "btn-primary" : "btn-ghost"} !py-3`}
+                  onClick={() => setDealer(selected, p.id)}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+        </Sheet>
       )}
     </>
   );
@@ -214,8 +261,7 @@ function RoundCard({
   save,
   run,
   patchLocal,
-  onOpenPlayers,
-  onDelete,
+  writerId,
   onBackToCurrent,
 }: {
   round: Round;
@@ -228,8 +274,7 @@ function RoundCard({
   save: SaveFn;
   run: (fn: () => Promise<unknown>) => Promise<void>;
   patchLocal: PatchLocal;
-  onOpenPlayers: () => void;
-  onDelete?: () => void;
+  writerId: string | null;
   onBackToCurrent?: () => void;
 }) {
   const [editDone, setEditDone] = useState(false);
@@ -253,11 +298,6 @@ function RoundCard({
   // Spieler, die in dieser Runde angesagt haben (wichtig, falls jemand später dazukommt)
   const bidders = order.filter((p) => entry(p.id)?.bid != null);
   const missingTricks = bidders.some((p) => entry(p.id)?.hit === false && askTricks && entry(p.id)?.tricks == null);
-
-  function setDealer(pid: string) {
-    patchLocal(round.id, { dealer_player_id: pid });
-    void run(() => updateRound(round.id, { dealer_player_id: pid }));
-  }
 
   function confirmBids() {
     patchLocal(round.id, { phase: "playing" });
@@ -308,46 +348,6 @@ function RoundCard({
               zur aktuellen Runde
             </button>
           )}
-          {onDelete && (
-            <button className="text-xs underline" style={{ color: "var(--color-text-muted)" }} onClick={onDelete}>
-              Runde löschen
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Geber-Auswahl */}
-      <div className="mt-3">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 mb-1.5">
-          <span className="label !mb-0">
-            Geber
-            <span className="font-normal ml-1">· Vorschlag: {DEALER_MODES.find((m) => m.id === config.dealerMode)?.label}</span>
-          </span>
-          {!readOnly && (
-            <button className="text-xs font-semibold underline" style={{ color: "var(--color-ink-soft)" }} onClick={onOpenPlayers}>
-              Sitzordnung ändern
-            </button>
-          )}
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-          {players.map((p) => {
-            const active = p.id === dealer?.id;
-            return (
-              <button
-                key={p.id}
-                disabled={readOnly}
-                onClick={() => setDealer(p.id)}
-                className="chip !py-1.5 !px-3 !text-sm shrink-0 border"
-                style={{
-                  background: active ? "var(--color-ink)" : "transparent",
-                  color: active ? "white" : "var(--color-text)",
-                  borderColor: active ? "var(--color-ink)" : "var(--color-border)",
-                }}
-              >
-                {p.name}
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -362,7 +362,7 @@ function RoundCard({
               return (
                 <li key={p.id} className="flex items-center gap-3 py-2 border-b last:border-b-0" style={{ borderColor: "var(--color-border)" }}>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate">
+                    <div className="font-semibold truncate" style={{ color: p.id === writerId ? "var(--color-accent)" : undefined }}>
                       {p.name}
                       {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
                     </div>
@@ -438,7 +438,7 @@ function RoundCard({
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate" style={{ color: miss ? "var(--color-accent)" : undefined }}>
+                      <div className="font-semibold truncate" style={{ color: miss || p.id === writerId ? "var(--color-accent)" : undefined }}>
                         {p.name}
                         {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
                       </div>

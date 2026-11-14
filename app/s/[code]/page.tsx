@@ -251,7 +251,6 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             me={me}
             save={saveFtn}
             refresh={() => void refresh()}
-            onOpenPlayers={() => setPlayersOpen(true)}
             patchLocal={patchLocal}
             viewer={viewer}
           />

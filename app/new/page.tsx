@@ -47,19 +47,23 @@ async function loadTemplate(accountId: string): Promise<Template | null> {
   const sb = supabase();
   const { data: last } = await sb
     .from("sessions")
-    .select("id, game, config")
+    .select("id, game, config, created_by")
     .eq("account_id", accountId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!last) return null;
   const [p, g] = await Promise.all([
-    sb.from("players").select("name, seat").eq("session_id", last.id).order("seat"),
+    sb.from("players").select("name, seat, user_id").eq("session_id", last.id).order("seat"),
     sb.from("games").select("config").eq("session_id", last.id).order("number", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  // Kreis beim Schreiber beginnen lassen: er steht im Formular oben und landet beim Anlegen wieder ganz unten
+  const list = (p.data ?? []) as { name: string; user_id: string | null }[];
+  const w = list.findIndex((x) => x.user_id != null && x.user_id === last.created_by);
+  const names = (w > 0 ? [...list.slice(w), ...list.slice(0, w)] : list).map((x) => x.name);
   return {
     game: last.game as GameId,
-    names: (p.data ?? []).map((x) => x.name as string),
+    names,
     config: (g.data?.config ?? last.config ?? {}) as Template["config"],
   };
 }
@@ -154,7 +158,7 @@ function NewSessionForm({ template, isAccount }: { template: Template | null; is
 
         <h2 className="label">Spieler in Sitzreihenfolge</h2>
         <p className="text-xs -mt-1 mb-2" style={{ color: "var(--color-text-muted)" }}>
-          Der erste Name bist du. Mitspieler können per Code oder QR live zusehen.
+          Der erste Name bist du (Schreiber) – im Spielblock stehst du ganz unten. Mitspieler können per Code oder QR live zusehen.
         </p>
         <div className="flex flex-col gap-2 mb-2">
           {players.map((p, i) => (

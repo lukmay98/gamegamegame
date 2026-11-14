@@ -19,6 +19,7 @@ export function ScoreGrid({
   selectedId,
   onSelect,
   hint,
+  highlightId,
 }: {
   title: string;
   subtitle?: string;
@@ -31,6 +32,8 @@ export function ScoreGrid({
   selectedId?: string | null;
   onSelect?: (roundId: string) => void;
   hint?: string;
+  /** Name rot hervorheben (Schreiber) */
+  highlightId?: string | null;
 }) {
   const [open, setOpen] = useState(true);
   const scroller = useRef<HTMLDivElement>(null);
@@ -95,7 +98,7 @@ export function ScoreGrid({
               <tbody>
                 {players.map((p) => (
                   <tr key={p.id} className="border-t" style={{ borderColor: "var(--color-border)" }}>
-                    <td className={`${stickyLeft} px-3 py-1.5 font-semibold whitespace-nowrap max-w-28 truncate`} style={{ background: "var(--color-surface)" }}>
+                    <td className={`${stickyLeft} px-3 py-1.5 font-semibold whitespace-nowrap max-w-28 truncate`} style={{ background: "var(--color-surface)", color: p.id === highlightId ? "var(--color-accent)" : undefined }}>
                       {p.name}
                     </td>
                     {rounds.map((r) => (
