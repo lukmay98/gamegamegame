@@ -17,6 +17,7 @@ import {
 import type { LiveSession } from "@/lib/use-live-session";
 import { errorText } from "@/lib/supabase";
 import { Leaderboard } from "./leaderboard";
+import { ScoreGrid } from "./score-grid";
 import { ErrorBox, Stepper } from "./ui";
 
 type EntryPatch = Partial<Pick<Entry, "bid" | "tricks" | "hit">>;
@@ -90,7 +91,6 @@ export function FtnBoard({
         totals={totals.totals}
         me={me}
         finished={finished}
-        extra={(p) => (totals.played[p.id] ? `${totals.hits[p.id]} von ${totals.played[p.id]} getroffen` : null)}
       />
 
       {error && <div className="mb-3"><ErrorBox>{error}</ErrorBox></div>}
@@ -135,15 +135,36 @@ export function FtnBoard({
       )}
 
       {rounds.length > 0 && (
-        <ScoreTable
-          rounds={rounds}
+        <ScoreGrid
+          title="Spielblock"
+          subtitle={`Runde ${rounds.length} von ${plan.length}`}
           players={sortedPlayers}
-          entries={entries}
-          perRound={totals.perRound}
+          rounds={rounds}
           totals={totals.totals}
+          roundLabel={(r) => `${r.cards} K.`}
+          totalSub={(p) => (totals.played[p.id] ? `${totals.hits[p.id]}/${totals.played[p.id]} ✓` : null)}
           selectedId={selected?.id ?? null}
           onSelect={setSelectedId}
-          planLength={plan.length}
+          hint="Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen oder Korrigieren."
+          cell={(r, p) => {
+            const e = entries.find((x) => x.round_id === r.id && x.player_id === p.id);
+            const pts = totals.perRound[r.id]?.[p.id];
+            return (
+              <>
+                {pts != null ? (
+                  <span className="block font-bold leading-tight" style={{ color: e?.hit ? "var(--color-good)" : pts < 0 ? "var(--color-accent)" : "var(--color-text-muted)" }}>
+                    {pts}
+                  </span>
+                ) : (
+                  <span className="block leading-tight" style={{ color: "var(--color-text-muted)" }}>·</span>
+                )}
+                <span className="block text-[10px] leading-tight whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
+                  {e?.bid ?? "–"}
+                  {e?.hit === true ? " ✓" : e?.hit === false ? ` ✗${e.tricks != null ? `(${e.tricks})` : ""}` : ""}
+                </span>
+              </>
+            );
+          }}
         />
       )}
 
@@ -274,7 +295,7 @@ function RoundCard({
 
       {/* Geber-Auswahl */}
       <div className="mt-3">
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 mb-1.5">
           <span className="label !mb-0">
             Geber
             <span className="font-normal ml-1">· Vorschlag: {DEALER_MODES.find((m) => m.id === config.dealerMode)?.label}</span>
@@ -471,85 +492,3 @@ function RoundCard({
   );
 }
 
-function ScoreTable({
-  rounds,
-  players,
-  entries,
-  perRound,
-  totals,
-  selectedId,
-  onSelect,
-  planLength,
-}: {
-  rounds: Round[];
-  players: Player[];
-  entries: Entry[];
-  perRound: Record<string, Record<string, number | null>>;
-  totals: Record<string, number>;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  planLength: number;
-}) {
-  return (
-    <section>
-      <h2 className="font-display font-bold text-lg mb-2">
-        Spielblock <span className="text-sm font-normal" style={{ color: "var(--color-text-muted)" }}>· Runde {rounds.length} von {planLength}</span>
-      </h2>
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm tabular border-collapse">
-          <thead>
-            <tr style={{ background: "var(--color-surface-soft)" }}>
-              <th className="sticky left-0 px-2 py-2 text-left font-semibold" style={{ background: "var(--color-surface-soft)" }}>#</th>
-              {players.map((p) => (
-                <th key={p.id} className="px-2 py-2 font-semibold text-center min-w-16 truncate max-w-24">{p.name}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rounds.map((r) => (
-              <tr
-                key={r.id}
-                onClick={() => onSelect(r.id)}
-                className="cursor-pointer border-t"
-                style={{ borderColor: "var(--color-border)", background: r.id === selectedId ? "var(--color-accent-soft)" : undefined }}
-              >
-                <td className="sticky left-0 px-2 py-1.5 whitespace-nowrap" style={{ background: r.id === selectedId ? "var(--color-accent-soft)" : "var(--color-surface)" }}>
-                  <span className="font-semibold">{r.round_number}</span>
-                  <span className="text-xs ml-1" style={{ color: "var(--color-text-muted)" }}>({r.cards})</span>
-                </td>
-                {players.map((p) => {
-                  const e = entries.find((x) => x.round_id === r.id && x.player_id === p.id);
-                  const pts = perRound[r.id]?.[p.id];
-                  return (
-                    <td key={p.id} className="px-2 py-1.5 text-center">
-                      {pts != null ? (
-                        <span className="font-bold" style={{ color: e?.hit ? "var(--color-good)" : pts < 0 ? "var(--color-accent)" : "var(--color-text-muted)" }}>
-                          {pts}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--color-text-muted)" }}>·</span>
-                      )}
-                      <span className="block text-[10px] leading-tight" style={{ color: "var(--color-text-muted)" }}>
-                        {e?.bid ?? "–"}
-                        {e?.hit === true ? " ✓" : e?.hit === false ? ` ✗${e.tricks != null ? ` (${e.tricks})` : ""}` : ""}
-                      </span>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2" style={{ borderColor: "var(--color-ink)" }}>
-              <td className="sticky left-0 px-2 py-2 font-bold" style={{ background: "var(--color-surface)" }}>Σ</td>
-              {players.map((p) => (
-                <td key={p.id} className="px-2 py-2 text-center font-display font-extrabold text-base">{totals[p.id]}</td>
-              ))}
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>Ansage und ✓/✗ unter den Punkten. Runde antippen zum Ansehen oder Korrigieren.</p>
-    </section>
-  );
-}

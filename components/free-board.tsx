@@ -7,6 +7,7 @@ import { freeTotals, targetReached } from "@/lib/games/free";
 import { errorText } from "@/lib/supabase";
 import type { LiveSession } from "@/lib/use-live-session";
 import { Leaderboard } from "./leaderboard";
+import { ScoreGrid } from "./score-grid";
 import { ErrorBox } from "./ui";
 
 export function FreeBoard({ live, me, refresh }: { live: LiveSession; me: string | null; refresh: () => void }) {
@@ -61,50 +62,24 @@ export function FreeBoard({ live, me, refresh }: { live: LiveSession; me: string
       )}
 
       {rounds.length > 0 && (
-        <section>
-          <h2 className="font-display font-bold text-lg mb-2">Spielblock</h2>
-          <div className="card overflow-x-auto">
-            <table className="w-full text-sm tabular border-collapse">
-              <thead>
-                <tr style={{ background: "var(--color-surface-soft)" }}>
-                  <th className="sticky left-0 px-2 py-2 text-left" style={{ background: "var(--color-surface-soft)" }}>#</th>
-                  {players.map((p) => (
-                    <th key={p.id} className="px-2 py-2 text-center min-w-14 truncate max-w-24">{p.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rounds.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="border-t cursor-pointer"
-                    style={{ borderColor: "var(--color-border)", background: editing === r.id ? "var(--color-accent-soft)" : undefined }}
-                    onClick={() => !finished && setEditing(r.id)}
-                  >
-                    <td className="sticky left-0 px-2 py-2 font-semibold" style={{ background: editing === r.id ? "var(--color-accent-soft)" : "var(--color-surface)" }}>{r.round_number}</td>
-                    {players.map((p) => {
-                      const v = entries.find((e) => e.round_id === r.id && e.player_id === p.id)?.points;
-                      return (
-                        <td key={p.id} className="px-2 py-2 text-center" style={{ color: v != null && v < 0 ? "var(--color-accent)" : undefined }}>
-                          {v ?? <span style={{ color: "var(--color-text-muted)" }}>·</span>}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2" style={{ borderColor: "var(--color-ink)" }}>
-                  <td className="sticky left-0 px-2 py-2 font-bold" style={{ background: "var(--color-surface)" }}>Σ</td>
-                  {players.map((p) => (
-                    <td key={p.id} className="px-2 py-2 text-center font-display font-extrabold text-base">{totals[p.id]}</td>
-                  ))}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          {!finished && <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>Runde antippen zum Bearbeiten.</p>}
-        </section>
+        <ScoreGrid
+          title="Spielblock"
+          subtitle={`${rounds.length} Runde${rounds.length === 1 ? "" : "n"}`}
+          players={[...players].sort((x, y) => x.seat - y.seat)}
+          rounds={rounds}
+          totals={totals}
+          selectedId={editing && editing !== "new" ? editing : null}
+          onSelect={finished ? undefined : (id) => setEditing(id)}
+          hint={finished ? undefined : "Runde antippen zum Bearbeiten."}
+          cell={(r, p) => {
+            const v = entries.find((e) => e.round_id === r.id && e.player_id === p.id)?.points;
+            return v != null ? (
+              <span style={{ color: v < 0 ? "var(--color-accent)" : undefined }}>{v}</span>
+            ) : (
+              <span style={{ color: "var(--color-text-muted)" }}>·</span>
+            );
+          }}
+        />
       )}
 
       {!finished && rounds.length > 0 && (
