@@ -58,7 +58,7 @@ export function transfers(list: Payout[]): Transfer[] {
 }
 
 export function euro(cents: number, signed = false): string {
-  const s = (Math.abs(cents) / 100).toLocaleString("de-AT", { style: "currency", currency: "EUR" });
+  const s = (Math.abs(cents) / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
   if (!signed || cents === 0) return cents < 0 ? `−${s}` : s;
   return cents > 0 ? `+${s}` : `−${s}`;
 }
