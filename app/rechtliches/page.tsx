@@ -29,10 +29,10 @@ export default function Rechtliches() {
 
         <H>Nutzungshinweise</H>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Die Nutzung ist kostenlos und ohne Konto möglich. Es besteht kein Anspruch auf Verfügbarkeit; Daten können jederzeit verloren gehen.</li>
+          <li>Die Nutzung ist kostenlos und ohne Konto möglich; optional gibt es Spielecodes, die man per E-Mail beim Betreiber anfragen kann. Es besteht kein Anspruch auf Verfügbarkeit; Daten können jederzeit verloren gehen.</li>
           <li>Punkteberechnungen erfolgen ohne Gewähr – maßgeblich sind die Regeln eurer Runde.</li>
           <li>Bitte für Spieler- und Session-Namen nur Vornamen oder Spitznamen verwenden und keine sensiblen Daten eintragen.</li>
-          <li>Wer den Session-Code kennt, kann der Session beitreten und alle Einträge darin sehen und ändern. Gebt den Code nur an Mitspieler weiter.</li>
+          <li>Wer den Session-Code kennt, kann der Session beitreten und alle Einträge darin live sehen (nicht ändern). Gebt den Code nur an Mitspieler weiter.</li>
         </ul>
 
         <H>Datenschutzerklärung</H>
@@ -45,6 +45,8 @@ export default function Rechtliches() {
         <ul className="list-disc pl-5 space-y-1">
           <li><b>Spieldaten:</b> Session-Name, Session-Code, Spielernamen, Sitzreihenfolge, Ansagen, Stiche und Punkte – also das, was ihr selbst eintragt.</li>
           <li><b>Anonyme Geräte-Kennung:</b> Beim ersten Öffnen erhält dein Browser eine zufällige, anonyme Nutzer-ID (ohne E-Mail, Name oder Passwort). Damit wird gespeichert, welchen Sessions dieses Gerät beigetreten ist und welche es angelegt hat.</li>
+          <li><b>Spielecode (optional):</b> Code, Passwort (nur verschlüsselt als Hash gespeichert – niemand kann es einsehen), Zeitpunkt der letzten Anmeldung, Fehlversuche, sowie eine Notiz des Betreibers zur Zuordnung (z. B. wer den Code angefragt hat). Alle Spieltage eines Spielecodes werden diesem zugeordnet.</li>
+          <li><b>Code-Anfrage per E-Mail:</b> Fragst du einen Spielecode an, erhält der Betreiber deine E-Mail-Adresse und den Inhalt deiner Nachricht. Diese werden nur zur Bearbeitung der Anfrage verwendet.</li>
           <li><b>Technische Zugriffsdaten:</b> Beim Aufruf der Website und bei Datenbankanfragen verarbeiten unsere Hosting-Dienstleister technisch notwendige Daten wie IP-Adresse, Zeitpunkt, aufgerufene Adresse und Browser-Kennung (Server-Logfiles).</li>
         </ul>
 
@@ -77,14 +79,14 @@ export default function Rechtliches() {
         <H2>Speicherdauer</H2>
         <p>
           Spieldaten bleiben gespeichert, bis die Person, die die Session angelegt hat, sie löscht (Papierkorb auf der Startseite oder „Session für alle
-          löschen“). Mitspieler können eine Session jederzeit aus ihrer Liste entfernen. Server-Logfiles werden von den Hosting-Anbietern nach deren
+          löschen“). Spielecodes bleiben bestehen, bis du um Löschung bittest oder der Betreiber sie löscht. Mitspieler können eine Session jederzeit aus ihrer Liste entfernen. Server-Logfiles werden von den Hosting-Anbietern nach deren
           Fristen automatisch gelöscht. Auf Anfrage löschen wir deine Daten auch manuell.
         </p>
 
         <H2>Deine Rechte</H2>
         <p>
           Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Wende dich dafür an
-          die oben genannte E-Mail-Adresse. Da die App anonym funktioniert, nenne uns bitte den Session-Code, damit wir die Daten zuordnen können.
+          die oben genannte E-Mail-Adresse. Nenne uns bitte den Session-Code oder deinen Spielecode, damit wir die Daten zuordnen können.
           Außerdem kannst du dich bei der österreichischen Datenschutzbehörde beschweren (
           <a className="underline" href="https://www.dsb.gv.at" target="_blank" rel="noreferrer">dsb.gv.at</a>).
         </p>

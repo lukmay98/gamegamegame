@@ -32,7 +32,9 @@ export function FtnBoard({
   refresh,
   onOpenPlayers,
   patchLocal,
+  viewer = false,
 }: {
+  viewer?: boolean;
   live: LiveSession;
   game: Game;
   onNewGame: () => void;
@@ -98,7 +100,7 @@ export function FtnBoard({
 
       {error && <div className="mb-3"><ErrorBox>{error}</ErrorBox></div>}
 
-      {game.status === "finished" && session.status !== "finished" && (
+      {!viewer && game.status === "finished" && session.status !== "finished" && (
         <div className="flex gap-2 mb-5">
           <button className="btn btn-accent flex-1 !py-3.5 text-base" onClick={onNewGame}>
             ＋ Neue Partie
@@ -109,7 +111,13 @@ export function FtnBoard({
         </div>
       )}
 
-      {!finished && !last && (
+      {viewer && !last && (
+        <p className="card px-4 py-6 mb-5 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
+          {finished ? "Diese Partie hatte keine Runden." : "Warten auf die erste Runde …"}
+        </p>
+      )}
+
+      {!viewer && !finished && !last && (
         <button className="btn btn-accent w-full !py-3.5 text-base mb-5" disabled={busy || players.length < 1} onClick={nextRound}>
           Runde 1 starten · {plan[0]} Karte{plan[0] === 1 ? "" : "n"}
         </button>
@@ -124,17 +132,17 @@ export function FtnBoard({
           entries={entries}
           config={config}
           me={me}
-          readOnly={finished}
+          readOnly={finished || viewer}
           save={save}
           run={run}
           patchLocal={patchLocal}
           onOpenPlayers={onOpenPlayers}
-          onDelete={selected.id === last?.id && !finished ? removeLast : undefined}
+          onDelete={selected.id === last?.id && !finished && !viewer ? removeLast : undefined}
           onBackToCurrent={selected.id !== last?.id ? () => setSelectedId(null) : undefined}
         />
       )}
 
-      {!finished && last && selected?.id === last.id && last.phase === "done" && (
+      {!viewer && !finished && last && selected?.id === last.id && last.phase === "done" && (
         <div className="mb-5">
           {planDone ? (
             <button className="btn btn-accent w-full !py-3.5 text-base" onClick={() => void finish()}>
@@ -159,7 +167,7 @@ export function FtnBoard({
           totalSub={(p) => (totals.played[p.id] ? `${totals.hits[p.id]}/${totals.played[p.id]} ✓` : null)}
           selectedId={selected?.id ?? null}
           onSelect={setSelectedId}
-          hint="Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen oder Korrigieren."
+          hint={`Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen${viewer ? "" : " oder Korrigieren"}.`}
           cell={(r, p) => {
             const e = entries.find((x) => x.round_id === r.id && x.player_id === p.id);
             const pts = totals.perRound[r.id]?.[p.id];
@@ -182,7 +190,7 @@ export function FtnBoard({
         />
       )}
 
-      {!finished && rounds.length > 0 && !planDone && (
+      {!viewer && !finished && rounds.length > 0 && !planDone && (
         <button className="btn btn-ghost w-full mt-4 text-sm" onClick={() => confirm("Partie jetzt beenden?") && void finish()}>
           Partie vorzeitig beenden
         </button>
@@ -363,13 +371,21 @@ function RoundCard({
                       {isDealer && forbidden != null && phase === "bidding" && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
                     </div>
                   </div>
-                  <Stepper
-                    value={e?.bid ?? null}
-                    max={cards}
-                    forbidden={isDealer && phase === "bidding" ? forbidden : null}
-                    disabled={readOnly}
-                    onChange={(v) => save(round, p, { bid: v })}
-                  />
+                  {readOnly ? (
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg tabular"
+                      style={{ background: "var(--color-surface-soft)", color: e?.bid == null ? "var(--color-text-muted)" : "var(--color-ink)" }}
+                    >
+                      {e?.bid ?? "–"}
+                    </div>
+                  ) : (
+                    <Stepper
+                      value={e?.bid ?? null}
+                      max={cards}
+                      forbidden={isDealer && phase === "bidding" ? forbidden : null}
+                      onChange={(v) => save(round, p, { bid: v })}
+                    />
+                  )}
                 </li>
               );
             })}
@@ -412,12 +428,12 @@ function RoundCard({
               return (
                 <li
                   key={p.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={miss}
+                  role={readOnly ? undefined : "button"}
+                  tabIndex={readOnly ? undefined : 0}
+                  aria-pressed={readOnly ? undefined : miss}
                   onClick={() => !readOnly && toggleMiss(p)}
                   onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && !readOnly && toggleMiss(p)}
-                  className="py-2 border-b last:border-b-0 select-none cursor-pointer -mx-2 px-2 rounded-lg transition-colors"
+                  className={`py-2 border-b last:border-b-0 select-none -mx-2 px-2 rounded-lg transition-colors ${readOnly ? "" : "cursor-pointer"}`}
                   style={{ borderColor: "var(--color-border)", background: miss ? "var(--color-accent-soft)" : undefined }}
                 >
                   <div className="flex items-center gap-3">
@@ -451,7 +467,10 @@ function RoundCard({
                       </div>
                     </div>
                   </div>
-                  {miss && askTricks && (
+                  {miss && askTricks && readOnly && e.tricks != null && (
+                    <p className="text-xs text-right mt-1" style={{ color: "var(--color-accent)" }}>{e.tricks} Stiche gemacht</p>
+                  )}
+                  {miss && askTricks && !readOnly && (
                     <div className="flex items-center justify-end gap-2 mt-1.5" onClick={(ev) => ev.stopPropagation()}>
                       <span className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>
                         Wie viele Stiche?

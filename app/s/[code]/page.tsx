@@ -10,11 +10,9 @@ import { FtnBoard } from "@/components/ftn-board";
 import { PlayersSheet } from "@/components/players-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { Sheet } from "@/components/sheet";
-import { LegalLink } from "@/components/legal-link";
 import { ErrorBox, Page, Spinner, TopBar } from "@/components/ui";
 import { deleteSession, leaveSession, saveEntry, setSessionStatus } from "@/lib/actions";
 import { GAMES, type Entry, type GameId, type Player, type Round } from "@/lib/games";
-import { saveLastName, useLastName } from "@/lib/last-name";
 import { ensureSignedIn, errorText, supabase } from "@/lib/supabase";
 import { useLiveSession } from "@/lib/use-live-session";
 
@@ -42,10 +40,16 @@ export default function SessionPage() {
       if (error) throw error;
       const p = (data ?? null) as Preview | null;
       setPreview(p);
-      if (p?.is_member) {
+      if (!p) return;
+      if (p.is_member) {
         const { data: s, error: e2 } = await supabase().from("sessions").select("id").eq("code", code).single();
         if (e2) throw e2;
         setSessionId(s.id as string);
+      } else {
+        // Per Code/QR beitreten = live zusehen
+        const { data: id, error: e3 } = await supabase().rpc("join_session", { p_code: code });
+        if (e3) throw e3;
+        setSessionId(id as string);
       }
     })().catch((e) => setError(errorText(e)));
   }, [code]);
@@ -58,7 +62,7 @@ export default function SessionPage() {
       </>
     );
   }
-  if (preview === undefined || (preview?.is_member && !sessionId)) {
+  if (preview === undefined || (preview && !sessionId)) {
     return (
       <>
         <TopBar title={code} back="/" />
@@ -81,90 +85,7 @@ export default function SessionPage() {
       </>
     );
   }
-  if (!sessionId) {
-    return <JoinGate code={code} preview={preview} onJoined={setSessionId} />;
-  }
-  return <SessionView sessionId={sessionId} me={me} />;
-}
-
-function JoinGate({ code, preview, onJoined }: { code: string; preview: Preview; onJoined: (id: string) => void }) {
-  const storedName = useLastName();
-  const [typed, setName] = useState<string | null>(null);
-  const name = typed ?? storedName;
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function join(asName: string | null) {
-    setBusy(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase().rpc("join_session", { p_code: code, p_name: asName });
-      if (error) throw error;
-      if (asName) saveLastName(asName);
-      onJoined(data as string);
-    } catch (e) {
-      setError(errorText(e));
-      setBusy(false);
-    }
-  }
-
-  const free = preview.players.filter((p) => !p.claimed);
-  const taken = preview.players.filter((p) => p.claimed);
-
-  return (
-    <>
-      <TopBar title="Session beitreten" back="/" />
-      <Page>
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-2" aria-hidden>{GAMES[preview.game]?.emoji}</div>
-          <h1 className="font-display font-extrabold text-2xl">{preview.name}</h1>
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            {GAMES[preview.game]?.label} · Code <b className="tracking-widest">{code}</b>
-            {preview.status === "finished" && " · beendet"}
-          </p>
-        </div>
-
-        {error && <div className="mb-4"><ErrorBox>{error}</ErrorBox></div>}
-
-        {free.length > 0 && (
-          <>
-            <h2 className="label">Wer bist du?</h2>
-            <div className="grid grid-cols-2 gap-2 mb-5">
-              {free.map((p) => (
-                <button key={p.name} className="btn btn-primary !py-3" disabled={busy} onClick={() => join(p.name)}>
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        {taken.length > 0 && (
-          <p className="text-xs mb-5" style={{ color: "var(--color-text-muted)" }}>
-            Schon dabei: {taken.map((p) => p.name).join(", ")}
-          </p>
-        )}
-
-        <form
-          className="card p-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (name.trim()) void join(name.trim());
-          }}
-        >
-          <label className="label" htmlFor="jname">{free.length > 0 ? "Oder als neuer Spieler" : "Dein Name"}</label>
-          <div className="flex gap-2">
-            <input id="jname" className="input" value={name} maxLength={30} placeholder="Name" onChange={(e) => setName(e.target.value)} />
-            <button className="btn btn-accent shrink-0" disabled={busy || !name.trim()}>Mitspielen</button>
-          </div>
-        </form>
-
-        <button className="btn btn-ghost w-full mt-3" disabled={busy} onClick={() => join(null)}>
-          Nur zuschauen / mitschreiben
-        </button>
-        <LegalLink />
-      </Page>
-    </>
-  );
+  return <SessionView sessionId={sessionId as string} me={me} />;
 }
 
 function SessionView({ sessionId, me }: { sessionId: string; me: string | null }) {
@@ -233,6 +154,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
 
   const { session, games } = data;
   const finished = session.status === "finished";
+  const viewer = !data.canEdit;
   const game = games.find((g) => g.id === tab) ?? games.at(-1) ?? null;
   const showEvening = tab === "evening" && games.length > 0;
   // Ansicht nur auf die gewählte Partie beschränken
@@ -276,6 +198,13 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             </button>
           )}
         </div>
+
+        {viewer && (
+          <p className="card px-4 py-2.5 mb-4 text-sm flex items-center gap-2" style={{ background: "var(--color-surface-soft)" }}>
+            <span aria-hidden>👀</span>
+            <span>Du siehst live zu – eintragen kann nur, wer den Spieltag erstellt hat.</span>
+          </p>
+        )}
 
         {(saveError || error) && <div className="mb-3"><ErrorBox>{saveError ?? error}</ErrorBox></div>}
 
@@ -324,9 +253,10 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             refresh={() => void refresh()}
             onOpenPlayers={() => setPlayersOpen(true)}
             patchLocal={patchLocal}
+            viewer={viewer}
           />
         ) : (
-          <FreeBoard key={game.id} live={gameLive} game={game} onNewGame={() => setNewGame(true)} me={me} refresh={() => void refresh()} />
+          <FreeBoard key={game.id} live={gameLive} game={game} onNewGame={() => setNewGame(true)} me={me} refresh={() => void refresh()} viewer={viewer} />
         )}
       </Page>
 
@@ -355,20 +285,22 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
       />
       <Sheet open={menu} onClose={() => setMenu(false)} title="Session">
         <div className="flex flex-col gap-2">
-          <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setPlayersOpen(true); }}>👥 Spieler verwalten</button>
+          {!viewer && (
+            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setPlayersOpen(true); }}>👥 Spieler verwalten</button>
+          )}
           <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setShare(true); }}>🔗 Code & QR teilen</button>
-          {!finished && (
+          {!finished && !viewer && (
             <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setNewGame(true); }}>＋ Neue Partie</button>
           )}
           {games.length > 1 && (
             <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Σ Abend-Gesamtstand</button>
           )}
-          {finished ? (
+          {viewer ? null : finished ? (
             <button className="btn btn-ghost justify-start" onClick={() => void setSessionStatus(session.id, "active").then(refresh)}>↩︎ Spieltag wieder öffnen</button>
           ) : (
             <button className="btn btn-ghost justify-start" onClick={() => confirm("Spieltag beenden? Danach ist er nur noch lesbar.") && void setSessionStatus(session.id, "finished").then(() => { setMenu(false); void refresh(); })}>🏁 Spieltag beenden</button>
           )}
-          {me && session.created_by !== me && (
+          {me && viewer && (
             <button
               className="btn btn-ghost justify-start"
               style={{ color: "var(--color-accent)" }}
@@ -380,7 +312,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
               🚪 Session verlassen
             </button>
           )}
-          {me && session.created_by === me && (
+          {me && !viewer && (session.created_by === me || session.account_id != null) && (
             <button
               className="btn btn-ghost justify-start"
               style={{ color: "var(--color-accent)" }}

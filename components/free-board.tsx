@@ -16,7 +16,9 @@ export function FreeBoard({
   onNewGame,
   me,
   refresh,
+  viewer = false,
 }: {
+  viewer?: boolean;
   live: LiveSession;
   game: Game;
   onNewGame: () => void;
@@ -26,6 +28,8 @@ export function FreeBoard({
   const { session, players, rounds, entries } = live;
   const config = game.config as FreeConfig;
   const finished = game.status === "finished" || session.status === "finished";
+  // Zuschauer: alles nur lesen
+  const locked = finished || viewer;
   const totals = useMemo(() => freeTotals(players, rounds, entries), [players, rounds, entries]);
   const reached = targetReached(config, totals);
   // "new" = neue Runde, sonst Round-ID, null = Editor zu
@@ -54,7 +58,7 @@ export function FreeBoard({
       )}
       {error && <div className="mb-3"><ErrorBox>{error}</ErrorBox></div>}
 
-      {game.status === "finished" && session.status !== "finished" && (
+      {!viewer && game.status === "finished" && session.status !== "finished" && (
         <div className="flex gap-2 mb-5">
           <button className="btn btn-accent flex-1 !py-3.5 text-base" onClick={onNewGame}>
             ＋ Neue Partie
@@ -68,7 +72,13 @@ export function FreeBoard({
         </div>
       )}
 
-      {!finished && editing && (
+      {viewer && rounds.length === 0 && (
+        <p className="card px-4 py-6 mb-5 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Warten auf die erste Runde …
+        </p>
+      )}
+
+      {!locked && editing && (
         <RoundForm
           key={editing}
           gameId={game.id}
@@ -82,7 +92,7 @@ export function FreeBoard({
         />
       )}
 
-      {!finished && !editing && (
+      {!locked && !editing && (
         <button className="btn btn-accent w-full !py-3.5 text-base mb-5" onClick={() => setEditing("new")}>
           ＋ Runde {rounds.length + 1} eintragen
         </button>
@@ -96,8 +106,8 @@ export function FreeBoard({
           rounds={rounds}
           totals={totals}
           selectedId={editing && editing !== "new" ? editing : null}
-          onSelect={finished ? undefined : (id) => setEditing(id)}
-          hint={finished ? undefined : "Runde antippen zum Bearbeiten."}
+          onSelect={locked ? undefined : (id) => setEditing(id)}
+          hint={locked ? undefined : "Runde antippen zum Bearbeiten."}
           cell={(r, p) => {
             const v = entries.find((e) => e.round_id === r.id && e.player_id === p.id)?.points;
             return v != null ? (
@@ -109,7 +119,7 @@ export function FreeBoard({
         />
       )}
 
-      {!finished && rounds.length > 0 && (
+      {!locked && rounds.length > 0 && (
         <button className="btn btn-ghost w-full mt-4" onClick={() => confirm("Partie beenden?") && void finish()}>
           🏁 Partie beenden
         </button>

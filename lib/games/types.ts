@@ -10,6 +10,7 @@ export interface Session {
   config: FtnConfig | FreeConfig;
   status: SessionStatus;
   created_by: string | null;
+  account_id: string | null;
   created_at: string;
   finished_at: string | null;
 }

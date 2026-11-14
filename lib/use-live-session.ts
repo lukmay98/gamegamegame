@@ -10,6 +10,8 @@ export interface LiveSession {
   players: Player[];
   rounds: Round[];
   entries: Entry[];
+  /** darf dieses Gerät eintragen? (sonst nur zusehen) */
+  canEdit: boolean;
 }
 
 /**
@@ -26,12 +28,13 @@ export function useLiveSession(sessionId: string | null) {
   const load = useCallback(async () => {
     if (!sessionId) return;
     const sb = supabase();
-    const [s, g, p, r, e] = await Promise.all([
+    const [s, g, p, r, e, c] = await Promise.all([
       sb.from("sessions").select("*").eq("id", sessionId).single(),
       sb.from("games").select("*").eq("session_id", sessionId).order("number"),
       sb.from("players").select("*").eq("session_id", sessionId).order("seat"),
       sb.from("rounds").select("*").eq("session_id", sessionId).order("round_number"),
       sb.from("entries").select("*").eq("session_id", sessionId),
+      sb.rpc("can_edit", { p_session: sessionId }),
     ]);
     const err = s.error ?? g.error ?? p.error ?? r.error ?? e.error;
     if (err) {
@@ -45,6 +48,7 @@ export function useLiveSession(sessionId: string | null) {
       players: (p.data ?? []) as Player[],
       rounds: (r.data ?? []) as Round[],
       entries: (e.data ?? []) as Entry[],
+      canEdit: c.data === true,
     });
   }, [sessionId]);
 

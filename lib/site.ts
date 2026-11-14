@@ -6,4 +6,4 @@ export const OWNER = {
   email: "mailtheownerofthewebapp@gmail.com",
 };
 
-export const LEGAL_UPDATED = "12.11.2026";
+export const LEGAL_UPDATED = "14.11.2026";

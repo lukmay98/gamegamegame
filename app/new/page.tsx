@@ -2,30 +2,92 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { effectiveFtn, FreeSettings, FtnSettings } from "@/components/game-settings";
-import { ErrorBox, Page, TopBar } from "@/components/ui";
+import { effectiveFtn, FreeSettings, FtnSettings, overrideFrom } from "@/components/game-settings";
+import { ErrorBox, Page, Spinner, TopBar } from "@/components/ui";
+import { useAccount } from "@/lib/account";
 import { GAMES, type FreeConfig, type FtnConfig, type GameId } from "@/lib/games";
-import { defaultFtnConfig } from "@/lib/games/ftn";
+import { defaultFtnConfig, normalizeFtnConfig } from "@/lib/games/ftn";
 import { defaultFreeConfig } from "@/lib/games/free";
 import { saveLastName, useLastName } from "@/lib/last-name";
 import { ensureSignedIn, errorText, supabase } from "@/lib/supabase";
 
+/** Vorlage aus dem letzten Spieltag eines Spielecodes. */
+interface Template {
+  game: GameId;
+  names: string[];
+  config: Partial<FtnConfig> | FreeConfig;
+}
+
 export default function NewSession() {
+  const { loading, account } = useAccount();
+  // undefined = lädt noch, null = keine Vorlage
+  const [template, setTemplate] = useState<Template | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!account) {
+      Promise.resolve().then(() => setTemplate(null));
+      return;
+    }
+    loadTemplate(account.id).then(setTemplate, () => setTemplate(null));
+  }, [loading, account]);
+
+  if (template === undefined) {
+    return (
+      <>
+        <TopBar title={account ? "Neuer Spieltag" : "Neue Session"} back="/" />
+        <Spinner />
+      </>
+    );
+  }
+  return <NewSessionForm template={template} isAccount={!!account} />;
+}
+
+async function loadTemplate(accountId: string): Promise<Template | null> {
+  const sb = supabase();
+  const { data: last } = await sb
+    .from("sessions")
+    .select("id, game, config")
+    .eq("account_id", accountId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!last) return null;
+  const [p, g] = await Promise.all([
+    sb.from("players").select("name, seat").eq("session_id", last.id).order("seat"),
+    sb.from("games").select("config").eq("session_id", last.id).order("number", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  return {
+    game: last.game as GameId,
+    names: (p.data ?? []).map((x) => x.name as string),
+    config: (g.data?.config ?? last.config ?? {}) as Template["config"],
+  };
+}
+
+function NewSessionForm({ template, isAccount }: { template: Template | null; isAccount: boolean }) {
   const router = useRouter();
-  const [game, setGame] = useState<GameId>("ftn");
+  const [game, setGame] = useState<GameId>(template?.game ?? "ftn");
   const [name, setName] = useState("");
   const storedName = useLastName();
-  const [rawPlayers, setPlayers] = useState<string[]>(["", "", ""]);
-  const [firstTouched, setFirstTouched] = useState(false);
-  const [ftnBase, setFtn] = useState<FtnConfig>(defaultFtnConfig(3));
-  const [maxOverride, setMaxOverride] = useState<number | null>(null);
-  const [free, setFree] = useState<FreeConfig>(defaultFreeConfig());
+  const [rawPlayers, setPlayers] = useState<string[]>(template && template.names.length > 0 ? template.names : ["", "", ""]);
+  const [firstTouched, setFirstTouched] = useState(!!template && template.names.length > 0);
+  const [ftnBase, setFtn] = useState<FtnConfig>(() =>
+    template?.game === "ftn" ? normalizeFtnConfig(template.config as Partial<FtnConfig>) : defaultFtnConfig(3),
+  );
+  const [maxOverride, setMaxOverride] = useState<number | null>(() =>
+    template?.game === "ftn" ? overrideFrom(normalizeFtnConfig(template.config as Partial<FtnConfig>), template.names.length) : null,
+  );
+  const [free, setFree] = useState<FreeConfig>(() =>
+    template?.game === "free" ? { ...defaultFreeConfig(), ...(template.config as FreeConfig) } : defaultFreeConfig(),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     ensureSignedIn().catch((e) => setError(errorText(e)));
   }, []);
+
+  const noun = isAccount ? "Spieltag" : "Session";
 
   // Erster Spieler = du; vorbefüllt mit dem zuletzt verwendeten Namen
   const players = useMemo(
@@ -61,8 +123,13 @@ export default function NewSession() {
 
   return (
     <>
-      <TopBar title="Neue Session" back="/" />
+      <TopBar title={isAccount ? "Neuer Spieltag" : "Neue Session"} back="/" />
       <Page>
+        {template && (
+          <p className="text-sm mb-4 card px-4 py-3" style={{ background: "var(--color-surface-soft)" }}>
+            ↺ Namen, Reihenfolge und Regeln vom letzten Spieltag übernommen – du kannst alles anpassen.
+          </p>
+        )}
         <h2 className="label">Spiel</h2>
         <div className="grid gap-2 mb-6">
           {(Object.keys(GAMES) as GameId[]).map((id) => (
@@ -82,12 +149,12 @@ export default function NewSession() {
           ))}
         </div>
 
-        <label className="label" htmlFor="sname">Name der Session (optional)</label>
+        <label className="label" htmlFor="sname">Name {isAccount ? "des Spieltags" : "der Session"} (optional)</label>
         <input id="sname" className="input mb-6" placeholder="z. B. Freitagsrunde" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
 
         <h2 className="label">Spieler in Sitzreihenfolge</h2>
         <p className="text-xs -mt-1 mb-2" style={{ color: "var(--color-text-muted)" }}>
-          Der erste Name bist du. Mitspieler können später auch selbst per Code beitreten.
+          Der erste Name bist du. Mitspieler können per Code oder QR live zusehen.
         </p>
         <div className="flex flex-col gap-2 mb-2">
           {players.map((p, i) => (
@@ -137,7 +204,7 @@ export default function NewSession() {
         <div className="fixed bottom-0 left-0 right-0 p-4" style={{ background: "linear-gradient(transparent, var(--color-bg) 30%)" }}>
           <div className="max-w-lg mx-auto">
             <button className="btn btn-accent w-full !py-3.5 text-base" disabled={busy || names.length < 1 || !players[0].trim() || duplicate} onClick={create}>
-              {busy ? "Wird erstellt …" : "Session starten"}
+              {busy ? "Wird erstellt …" : `${noun} starten`}
             </button>
           </div>
         </div>
