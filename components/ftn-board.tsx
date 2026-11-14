@@ -10,7 +10,8 @@ import {
   ftnTotals,
   needsTricks,
   normalizeFtnConfig,
-  suggestDealer,
+  firstDealer,
+  nextDealer,
 } from "@/lib/games/ftn";
 import type { LiveSession } from "@/lib/use-live-session";
 import { errorText } from "@/lib/supabase";
@@ -32,8 +33,11 @@ export function FtnBoard({
   refresh,
   patchLocal,
   viewer = false,
+  previousGames = [],
 }: {
   viewer?: boolean;
+  /** Punkte je Spieler der vorherigen Spiele dieses Spieltags (für den ersten Geber) */
+  previousGames?: Record<string, number>[];
   live: LiveSession;
   game: Game;
   onNewGame: () => void;
@@ -76,7 +80,8 @@ export function FtnBoard({
   async function nextRound() {
     const n = (last?.round_number ?? 0) + 1;
     const cards = plan[Math.min(n, plan.length) - 1];
-    const dealer = suggestDealer(config.dealerMode, sortedPlayers, last, totals);
+    // Erste Runde: je nach Einstellung; danach reihum nach Sitzordnung
+    const dealer = last ? nextDealer(sortedPlayers, last.dealer_player_id) : firstDealer(config.dealerMode, sortedPlayers, previousGames);
     setBusy(true);
     await run(async () => {
       const id = await createRound(session.id, game.id, n, cards, dealer?.id ?? null);
@@ -115,7 +120,7 @@ export function FtnBoard({
       {!viewer && game.status === "finished" && session.status !== "finished" && (
         <div className="flex gap-2 mb-5">
           <button className="btn btn-accent flex-1 !py-3.5 text-base" onClick={onNewGame}>
-            ＋ Neue Partie
+            ＋ Neues Spiel
           </button>
           <button className="btn btn-ghost" onClick={() => void run(() => setGameStatus(game.id, "active"))}>
             Wieder öffnen
@@ -125,7 +130,7 @@ export function FtnBoard({
 
       {viewer && !last && (
         <p className="card px-4 py-6 mb-5 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
-          {finished ? "Diese Partie hatte keine Runden." : "Warten auf die erste Runde …"}
+          {finished ? "Dieses Spiel hatte keine Runden." : "Warten auf die erste Runde …"}
         </p>
       )}
 
@@ -159,7 +164,7 @@ export function FtnBoard({
         <div className="mb-5">
           {planDone ? (
             <button className="btn btn-accent w-full !py-3.5 text-base" onClick={() => void finish()}>
-              🏁 Partie beenden
+              🏁 Spiel beenden
             </button>
           ) : (
             <button className="btn btn-accent w-full !py-3.5 text-base" disabled={busy} onClick={nextRound}>
@@ -219,8 +224,8 @@ export function FtnBoard({
             )}
           </div>
           {!planDone && (
-            <button className="btn btn-ghost w-full text-sm" onClick={() => confirm("Partie jetzt beenden?") && void finish()}>
-              Partie vorzeitig beenden
+            <button className="btn btn-ghost w-full text-sm" onClick={() => confirm("Spiel jetzt beenden?") && void finish()}>
+              Spiel vorzeitig beenden
             </button>
           )}
         </div>

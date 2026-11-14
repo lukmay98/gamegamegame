@@ -30,14 +30,14 @@ export default function Rechtliches() {
         <H>Nutzungshinweise</H>
         <ul className="list-disc pl-5 space-y-1">
           <li>
-            Die Nutzung ist kostenlos. Man kann ohne Konto spielen („Einmal-Session“) oder mit einem Spielecode, den man per E-Mail beim Betreiber
+            Die Nutzung ist kostenlos. Man kann ohne Konto spielen („Ohne Login spielen“) oder mit einem Spielecode, den man per E-Mail beim Betreiber
             anfragt. Es besteht kein Anspruch auf Verfügbarkeit; Daten können jederzeit verloren gehen.
           </li>
           <li>Punkteberechnungen erfolgen ohne Gewähr – maßgeblich sind die Regeln eurer Runde.</li>
-          <li>Bitte für Spieler- und Session-Namen nur Vornamen oder Spitznamen verwenden und keine sensiblen Daten eintragen.</li>
+          <li>Bitte für Spieler- und Spieltag-Namen nur Vornamen oder Spitznamen verwenden und keine sensiblen Daten eintragen.</li>
           <li>
-            Wer den Session-Code oder QR-Code kennt, kann der Session beitreten und alle Einträge live sehen, aber nichts ändern. Eintragen kann nur das
-            Gerät, das die Session angelegt hat, bzw. wer mit dem zugehörigen Spielecode angemeldet ist. Gebt Codes nur an Mitspieler weiter.
+            Wer den Spieltag-Code oder QR-Code kennt, kann dem Spieltag beitreten und alle Einträge live sehen, aber nichts ändern. Eintragen kann nur das
+            Gerät, das den Spieltag angelegt hat, bzw. wer mit dem zugehörigen Spielecode angemeldet ist. Gebt Codes nur an Mitspieler weiter.
           </li>
           <li>Spielecode und Passwort sind persönlich. Gib dein Passwort nicht weiter; der Betreiber fragt nie danach.</li>
         </ul>
@@ -51,12 +51,12 @@ export default function Rechtliches() {
         <H2>Welche Daten verarbeitet werden</H2>
         <ul className="list-disc pl-5 space-y-1">
           <li>
-            <b>Spieldaten:</b> Name des Spieltags, Session-Code, Spielernamen, Sitzreihenfolge, Geber, Ansagen, Stiche, Treffer und Punkte sowie die
-            Regeln jeder Partie – also das, was ihr selbst eintragt.
+            <b>Spieldaten:</b> Name des Spieltags, Spieltag-Code, Spielernamen, Sitzreihenfolge, Geber, Ansagen, Stiche, Treffer und Punkte sowie die
+            Regeln jedes Spiels – also das, was ihr selbst eintragt.
           </li>
           <li>
             <b>Anonyme Geräte-Kennung:</b> Beim ersten Öffnen erhält dein Browser eine zufällige, anonyme Nutzer-ID (ohne E-Mail oder Namen). Damit wird
-            gespeichert, welche Sessions dieses Gerät angelegt hat oder ansieht, ob es dort eintragen darf oder nur zusieht, und ob es mit einem
+            gespeichert, welche Spieltage dieses Gerät angelegt hat oder ansieht, ob es dort eintragen darf oder nur zusieht, und ob es mit einem
             Spielecode angemeldet ist.
           </li>
           <li>
@@ -78,7 +78,7 @@ export default function Rechtliches() {
         <H2>Zweck und Rechtsgrundlage</H2>
         <ul className="list-disc pl-5 space-y-1">
           <li>
-            Bereitstellung der App (Sessions anlegen, beitreten, Spielstände live anzeigen) und – bei Spielecodes – das Speichern deiner Spieltage und
+            Bereitstellung der App (Spieltage anlegen, beitreten, Spielstände live anzeigen) und – bei Spielecodes – das Speichern deiner Spieltage und
             Vorlagen: Erfüllung des von dir angefragten Dienstes (Art. 6 Abs. 1 lit. b DSGVO).
           </li>
           <li>
@@ -109,13 +109,13 @@ export default function Rechtliches() {
             Privacy Framework zertifiziert.
           </li>
         </ul>
-        <p className="mt-2">Eine Weitergabe an sonstige Dritte findet nicht statt. Mitspieler sehen die Spieldaten der Sessions, denen sie beitreten.</p>
+        <p className="mt-2">Eine Weitergabe an sonstige Dritte findet nicht statt. Mitspieler sehen die Spieldaten der Spieltage, denen sie beitreten.</p>
 
         <H2>Speicherdauer</H2>
         <ul className="list-disc pl-5 space-y-1">
           <li>
             Spieldaten bleiben gespeichert, bis sie gelöscht werden: über den Papierkorb auf der Startseite oder „Spieltag für alle löschen“ (durch das
-            anlegende Gerät bzw. den Spielecode). Zuschauer können eine Session jederzeit aus ihrer Liste entfernen.
+            anlegende Gerät bzw. den Spielecode). Zuschauer können einen Spieltag jederzeit aus ihrer Liste entfernen.
           </li>
           <li>
             Spielecodes bleiben bestehen, bis du um Löschung bittest oder der Betreiber sie löscht. Wird ein Code gelöscht, werden Passwort-Hash, Notiz
@@ -130,7 +130,7 @@ export default function Rechtliches() {
         <H2>Deine Rechte</H2>
         <p>
           Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Wende dich dafür an
-          die oben genannte E-Mail-Adresse und nenne uns den Session-Code oder deinen Spielecode, damit wir die Daten zuordnen können. Außerdem kannst du
+          die oben genannte E-Mail-Adresse und nenne uns den Spieltag-Code oder deinen Spielecode, damit wir die Daten zuordnen können. Außerdem kannst du
           dich bei der österreichischen Datenschutzbehörde beschweren (
           <a className="underline" href="https://www.dsb.gv.at" target="_blank" rel="noreferrer">dsb.gv.at</a>).
         </p>

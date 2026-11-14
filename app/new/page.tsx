@@ -35,12 +35,12 @@ export default function NewSession() {
   if (template === undefined) {
     return (
       <>
-        <TopBar title={account ? "Neuer Spieltag" : "Neue Session"} back="/" />
+        <TopBar title="Neuer Spieltag" back="/" />
         <Spinner />
       </>
     );
   }
-  return <NewSessionForm template={template} isAccount={!!account} />;
+  return <NewSessionForm template={template} />;
 }
 
 async function loadTemplate(accountId: string): Promise<Template | null> {
@@ -68,7 +68,7 @@ async function loadTemplate(accountId: string): Promise<Template | null> {
   };
 }
 
-function NewSessionForm({ template, isAccount }: { template: Template | null; isAccount: boolean }) {
+function NewSessionForm({ template }: { template: Template | null }) {
   const router = useRouter();
   const [game, setGame] = useState<GameId>(template?.game ?? "ftn");
   const [name, setName] = useState("");
@@ -91,7 +91,7 @@ function NewSessionForm({ template, isAccount }: { template: Template | null; is
     ensureSignedIn().catch((e) => setError(errorText(e)));
   }, []);
 
-  const noun = isAccount ? "Spieltag" : "Session";
+  const noun = "Spieltag";
 
   // Erster Spieler = du; vorbefüllt mit dem zuletzt verwendeten Namen
   const players = useMemo(
@@ -127,7 +127,7 @@ function NewSessionForm({ template, isAccount }: { template: Template | null; is
 
   return (
     <>
-      <TopBar title={isAccount ? "Neuer Spieltag" : "Neue Session"} back="/" />
+      <TopBar title="Neuer Spieltag" back="/" />
       <Page>
         {template && (
           <p className="text-sm mb-4 card px-4 py-3" style={{ background: "var(--color-surface-soft)" }}>
@@ -153,7 +153,7 @@ function NewSessionForm({ template, isAccount }: { template: Template | null; is
           ))}
         </div>
 
-        <label className="label" htmlFor="sname">Name {isAccount ? "des Spieltags" : "der Session"} (optional)</label>
+        <label className="label" htmlFor="sname">Name des Spieltags (optional)</label>
         <input id="sname" className="input mb-6" placeholder="z. B. Freitagsrunde" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
 
         <h2 className="label">Spieler in Sitzreihenfolge</h2>

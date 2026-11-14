@@ -58,7 +58,8 @@ export interface Entry {
 }
 
 // ── Fuck the Neighbour (Stiche ansagen) ──────────────────────
-export type DealerMode = "order" | "lastRoundWinner" | "leader";
+/** Wer gibt in der ersten Runde eines Spiels? Innerhalb eines Spiels geht es reihum. */
+export type DealerMode = "dayLeader" | "lastGameWinner";
 
 export type FtnSequence = "up-down" | "up" | "down" | "constant";
 

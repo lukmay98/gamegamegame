@@ -56,9 +56,9 @@ export default function Start() {
           <Link href="/einmal" className="card px-4 py-4 flex items-center gap-3 hover:border-[var(--color-ink)]">
             <span className="text-2xl" aria-hidden>🎲</span>
             <span className="flex-1">
-              <span className="block font-semibold">Einmal-Session ohne Login</span>
+              <span className="block font-semibold">Ohne Login spielen</span>
               <span className="block text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                Schnell starten oder einer Session per Code beitreten.
+                Spieltag schnell starten oder per Code zusehen.
               </span>
             </span>
             <Chevron />

@@ -25,9 +25,8 @@ export const FTN_PRESETS: Record<string, { label: string; hint: string; scoring:
 export const DEFAULT_DECK_SIZE = 36;
 
 export const DEALER_MODES: { id: DealerMode; label: string; hint: string }[] = [
-  { id: "order", label: "Der Reihe nach", hint: "Der nächste Platz nach dem letzten Geber" },
-  { id: "lastRoundWinner", label: "Gewinner der Vorrunde", hint: "Wer in der letzten Runde die meisten Punkte gemacht hat" },
-  { id: "leader", label: "Gesamtführender", hint: "Wer insgesamt vorne liegt" },
+  { id: "dayLeader", label: "Führender des Spieltags", hint: "Wer am Spieltag insgesamt die meisten Punkte hat" },
+  { id: "lastGameWinner", label: "Gewinner des letzten Spiels", hint: "Wer das vorherige Spiel gewonnen hat" },
 ];
 
 /** Fehlende Felder älterer Configs mit Standardwerten auffüllen. */
@@ -39,7 +38,8 @@ export function normalizeFtnConfig(c: Partial<FtnConfig> & { decks?: number }): 
     scoringPreset: c.scoringPreset ?? "classic",
     dealerRule: c.dealerRule ?? true,
     deckSize: c.deckSize ?? (c.decks ? c.decks * 52 : DEFAULT_DECK_SIZE),
-    dealerMode: c.dealerMode ?? "order",
+    // ältere Werte (order/leader/lastRoundWinner) auf die neuen Varianten abbilden
+    dealerMode: (c.dealerMode as string) === "lastGameWinner" || (c.dealerMode as string) === "lastRoundWinner" ? "lastGameWinner" : "dayLeader",
     peakTwice: c.peakTwice ?? false,
     zeroHit: c.zeroHit ?? null,
   };
@@ -126,32 +126,22 @@ export function nextDealer(players: Player[], previousDealerId: string | null): 
 }
 
 /**
- * Vorschlag für den Geber der nächsten Runde.
- * - order: Platz nach dem letzten Geber
- * - lastRoundWinner: meiste Punkte in der letzten Runde
- * - leader: meiste Punkte insgesamt
- * Bei Gleichstand gewinnt, wer in Sitzreihenfolge nach dem letzten Geber zuerst kommt.
+ * Erster Geber eines Spiels. `previous` = Punkte je Spieler der bisherigen Spiele des Spieltags.
+ * - dayLeader: meiste Punkte über alle bisherigen Spiele
+ * - lastGameWinner: meiste Punkte im letzten Spiel
+ * Im ersten Spiel (oder ohne Punkte) beginnt der erste Platz; bei Gleichstand der Erste in Sitzreihenfolge.
+ * Danach geht es innerhalb des Spiels reihum (nextDealer).
  */
-export function suggestDealer(
-  mode: DealerMode,
-  players: Player[],
-  previousRound: Round | null,
-  totals: FtnTotals,
-): Player | null {
+export function firstDealer(mode: DealerMode, players: Player[], previous: Record<string, number>[]): Player | null {
   const sorted = [...players].sort((a, b) => a.seat - b.seat);
   if (sorted.length === 0) return null;
-  const prevDealer = previousRound?.dealer_player_id ?? null;
-  if (mode === "order" || !previousRound) return nextDealer(sorted, prevDealer);
-
-  const score = (p: Player) =>
-    mode === "lastRoundWinner" ? (totals.perRound[previousRound.id]?.[p.id] ?? null) : totals.totals[p.id] ?? null;
-  const scored = sorted.filter((p) => score(p) != null);
-  if (scored.length === 0) return nextDealer(sorted, prevDealer);
-  const best = Math.max(...scored.map((p) => score(p) as number));
-  // Reihenfolge ab dem Platz nach dem letzten Geber, damit Gleichstände fair rotieren
-  const start = Math.max(0, sorted.findIndex((p) => p.id === prevDealer) + 1);
-  const rotated = [...sorted.slice(start), ...sorted.slice(0, start)];
-  return rotated.find((p) => score(p) === best) ?? null;
+  const relevant = mode === "lastGameWinner" ? previous.slice(-1) : previous;
+  const sums: Record<string, number> = {};
+  for (const g of relevant) for (const [id, pts] of Object.entries(g)) sums[id] = (sums[id] ?? 0) + pts;
+  const scored = sorted.filter((p) => p.id in sums);
+  if (scored.length === 0) return sorted[0];
+  const best = Math.max(...scored.map((p) => sums[p.id]));
+  return scored.find((p) => sums[p.id] === best) ?? sorted[0];
 }
 
 export interface FtnTotals {

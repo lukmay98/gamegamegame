@@ -61,7 +61,7 @@ export function FreeBoard({
       {!viewer && game.status === "finished" && session.status !== "finished" && (
         <div className="flex gap-2 mb-5">
           <button className="btn btn-accent flex-1 !py-3.5 text-base" onClick={onNewGame}>
-            ＋ Neue Partie
+            ＋ Neues Spiel
           </button>
           <button
             className="btn btn-ghost"
@@ -120,8 +120,8 @@ export function FreeBoard({
       )}
 
       {!locked && rounds.length > 0 && (
-        <button className="btn btn-ghost w-full mt-4" onClick={() => confirm("Partie beenden?") && void finish()}>
-          🏁 Partie beenden
+        <button className="btn btn-ghost w-full mt-4" onClick={() => confirm("Spiel beenden?") && void finish()}>
+          🏁 Spiel beenden
         </button>
       )}
     </>

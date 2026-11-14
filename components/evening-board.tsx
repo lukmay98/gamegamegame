@@ -69,8 +69,8 @@ export function EveningBoard({ live, me, onSelectGame }: { live: LiveSession; me
     <>
       <Leaderboard players={live.players} totals={totals} lowWins={lowWins} me={me} finished={finished} />
       <ScoreGrid
-        title="Abend"
-        subtitle={`${results.length} ${results.length === 1 ? "Partie" : "Partien"}`}
+        title="Spieltag"
+        subtitle={`${results.length} ${results.length === 1 ? "Spiel" : "Spiele"}`}
         players={live.players}
         rounds={columns}
         roundLabel={(c) => (byId.get(c.id)?.game.status === "finished" ? "fertig" : "läuft")}
@@ -80,14 +80,14 @@ export function EveningBoard({ live, me, onSelectGame }: { live: LiveSession; me
           return (
             <span className="font-semibold whitespace-nowrap">
               {r.points[p.id]}
-              {r.winners.has(p.id) && <span aria-label="Partie gewonnen"> 🏆</span>}
+              {r.winners.has(p.id) && <span aria-label="Spiel gewonnen"> 🏆</span>}
             </span>
           );
         }}
         totals={totals}
         totalSub={(p) => `${wins[p.id] ?? 0} 🏆`}
         onSelect={onSelectGame}
-        hint="Tippe auf eine Partie, um sie zu öffnen. Jede Partie wird mit ihren eigenen Regeln gewertet."
+        hint="Tippe auf ein Spiel, um es zu öffnen. Jedes Spiel wird mit seinen eigenen Regeln gewertet."
       />
     </>
   );

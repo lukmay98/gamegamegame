@@ -30,7 +30,7 @@ export function NewGameSheet({
 }) {
   if (!open) return null;
   return (
-    <Sheet open onClose={onClose} title="Neue Partie">
+    <Sheet open onClose={onClose} title="Neues Spiel">
       <NewGameForm sessionId={sessionId} game={game} games={games} playerCount={playerCount} onCreated={onCreated} />
     </Sheet>
   );
@@ -75,8 +75,8 @@ function NewGameForm({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-        Partie {number} übernimmt Spieler und Regeln der letzten Partie. Du kannst sie hier anpassen – laufende Partien werden beendet,
-        ihre Punkte bleiben unverändert.
+        Spiel {number} übernimmt Spieler und Regeln des letzten Spiels. Du kannst sie hier anpassen – ein laufendes Spiel wird beendet,
+        seine Punkte bleiben unverändert.
       </p>
       {game === "ftn" ? (
         <FtnSettings base={ftnBase} setFtn={(fn) => setFtnBase(fn)} maxOverride={maxOverride} setMaxOverride={setMaxOverride} playerCount={playerCount} />
@@ -85,7 +85,7 @@ function NewGameForm({
       )}
       {error && <ErrorBox>{error}</ErrorBox>}
       <button className="btn btn-accent w-full !py-3.5 text-base" disabled={busy} onClick={() => void start()}>
-        {busy ? "Startet …" : `Partie ${number} starten`}
+        {busy ? "Startet …" : `Spiel ${number} starten`}
       </button>
     </div>
   );

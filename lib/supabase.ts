@@ -112,7 +112,7 @@ export function errorText(err: unknown): string {
   if (typeof err === "string") return err;
   const e = err as { message?: string; code?: string };
   if (e.code === "23505") return "Das gibt es schon (doppelter Eintrag).";
-  if (e.code === "PGRST116") return "Diese Session gibt es nicht mehr (gelöscht) oder du bist kein Mitglied mehr.";
+  if (e.code === "PGRST116") return "Diesen Spieltag gibt es nicht mehr (gelöscht) oder du hast keinen Zugriff mehr.";
   if (e.code === "42501") return "Anmeldung verloren. Bitte nochmal versuchen oder die Seite neu laden.";
   return e.message ?? "Unbekannter Fehler";
 }

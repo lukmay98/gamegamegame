@@ -169,7 +169,7 @@ export function FtnSettings({
             </div>
 
             <div>
-              <div className="label">Nächster Geber</div>
+              <div className="label">Erster Geber eines Spiels</div>
               <div className="flex flex-col gap-2">
                 {DEALER_MODES.map((m) => (
                   <button
@@ -188,7 +188,8 @@ export function FtnSettings({
                 ))}
               </div>
               <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>
-                Das ist nur der Vorschlag – in jeder Runde kann der Geber per Antippen geändert werden.
+                Innerhalb eines Spiels geht der Geber reihum nach Sitzordnung. Im ersten Spiel des Spieltags beginnt der erste Platz.
+                Der Geber lässt sich jederzeit unten über „Geber ändern“ anpassen.
               </p>
             </div>
 

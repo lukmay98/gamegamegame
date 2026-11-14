@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FreeBoard } from "@/components/free-board";
-import { EveningBoard } from "@/components/evening-board";
+import { EveningBoard, gameResults } from "@/components/evening-board";
 import { NewGameSheet } from "@/components/new-game-sheet";
 import { FtnBoard } from "@/components/ftn-board";
 import { PlayersSheet } from "@/components/players-sheet";
@@ -77,7 +77,7 @@ export default function SessionPage() {
         <Page>
           <div className="text-center py-10">
             <div className="text-4xl mb-3">🤷</div>
-            <h1 className="font-display font-bold text-xl">Keine Session mit Code {code}</h1>
+            <h1 className="font-display font-bold text-xl">Kein Spieltag mit Code {code}</h1>
             <p className="text-sm mt-2 mb-6" style={{ color: "var(--color-text-muted)" }}>Code vertippt? Frag nochmal nach.</p>
             <Link href="/" className="btn btn-primary">Zur Startseite</Link>
           </div>
@@ -138,7 +138,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
   if (error && !data) {
     return (
       <>
-        <TopBar title="Session" back="/" />
+        <TopBar title="Spieltag" back="/" />
         <Page><ErrorBox>{error}</ErrorBox></Page>
       </>
     );
@@ -146,7 +146,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
   if (!data) {
     return (
       <>
-        <TopBar title="Session" back="/" />
+        <TopBar title="Spieltag" back="/" />
         <Spinner />
       </>
     );
@@ -156,6 +156,8 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
   const finished = session.status === "finished";
   const viewer = !data.canEdit;
   const game = games.find((g) => g.id === tab) ?? games.at(-1) ?? null;
+  // Punkte der Spiele vor dem gewählten – bestimmt den ersten Geber des Spiels
+  const previousGames = game ? gameResults(data).filter((r) => r.game.number < game.number).map((r) => r.points) : [];
   const showEvening = tab === "evening" && games.length > 0;
   // Ansicht nur auf die gewählte Partie beschränken
   const gameRounds = game ? data.rounds.filter((r) => r.game_id === game.id) : [];
@@ -209,7 +211,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         {(saveError || error) && <div className="mb-3"><ErrorBox>{saveError ?? error}</ErrorBox></div>}
 
         {games.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 mb-4" role="tablist" aria-label="Partien">
+          <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 mb-4" role="tablist" aria-label="Spiele">
             {games.map((g) => {
               const sel = !showEvening && g.id === game?.id;
               return (
@@ -221,7 +223,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
                   style={sel ? { background: "var(--color-ink)", color: "white" } : { background: "var(--color-surface-soft)", color: "var(--color-ink)" }}
                   onClick={() => setTab(g.id)}
                 >
-                  Partie {g.number}
+                  Spiel {g.number}
                   {g.status === "finished" ? " ✓" : " · läuft"}
                 </button>
               );
@@ -233,7 +235,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
               style={showEvening ? { background: "var(--color-accent)", color: "white" } : { background: "var(--color-accent-soft)", color: "var(--color-ink)" }}
               onClick={() => setTab("evening")}
             >
-              Σ Abend
+              Σ Spieltag
             </button>
           </div>
         )}
@@ -253,6 +255,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             refresh={() => void refresh()}
             patchLocal={patchLocal}
             viewer={viewer}
+            previousGames={previousGames}
           />
         ) : (
           <FreeBoard key={game.id} live={gameLive} game={game} onNewGame={() => setNewGame(true)} me={me} refresh={() => void refresh()} viewer={viewer} />
@@ -282,17 +285,17 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         me={me}
         onChanged={() => void refresh()}
       />
-      <Sheet open={menu} onClose={() => setMenu(false)} title="Session">
+      <Sheet open={menu} onClose={() => setMenu(false)} title="Spieltag">
         <div className="flex flex-col gap-2">
           {!viewer && (
             <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setPlayersOpen(true); }}>👥 Spieler verwalten</button>
           )}
           <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setShare(true); }}>🔗 Code & QR teilen</button>
           {!finished && !viewer && (
-            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setNewGame(true); }}>＋ Neue Partie</button>
+            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setNewGame(true); }}>＋ Neues Spiel</button>
           )}
           {games.length > 1 && (
-            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Σ Abend-Gesamtstand</button>
+            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Σ Gesamtstand Spieltag</button>
           )}
           {viewer ? null : finished ? (
             <button className="btn btn-ghost justify-start" onClick={() => void setSessionStatus(session.id, "active").then(refresh)}>↩︎ Spieltag wieder öffnen</button>
@@ -304,11 +307,11 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
               className="btn btn-ghost justify-start"
               style={{ color: "var(--color-accent)" }}
               onClick={() => {
-                if (!confirm("Session auf diesem Gerät verlassen? Mit dem Code kannst du jederzeit wieder beitreten.")) return;
+                if (!confirm("Spieltag auf diesem Gerät verlassen? Mit dem Code kannst du jederzeit wieder beitreten.")) return;
                 void leaveSession(session.id, me).then(() => router.push("/"));
               }}
             >
-              🚪 Session verlassen
+              🚪 Spieltag verlassen
             </button>
           )}
           {me && !viewer && (session.created_by === me || session.account_id != null) && (
@@ -316,14 +319,14 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
               className="btn btn-ghost justify-start"
               style={{ color: "var(--color-accent)" }}
               onClick={() => {
-                if (!confirm(`„${session.name}“ endgültig löschen? Die Session verschwindet für alle Mitspieler und kann nicht wiederhergestellt werden.`)) return;
+                if (!confirm(`„${session.name}“ endgültig löschen? Der Spieltag verschwindet für alle Mitspieler und kann nicht wiederhergestellt werden.`)) return;
                 deleteSession(session.id).then(
                   () => router.push("/"),
                   (e) => setSaveError(errorText(e)),
                 );
               }}
             >
-              🗑️ Session für alle löschen
+              🗑️ Spieltag für alle löschen
             </button>
           )}
         </div>

@@ -22,7 +22,7 @@ export default function SingleUse() {
     const host = s.created_by === me;
     const ok = confirm(
       host
-        ? `„${s.name}“ endgültig löschen? Die Session verschwindet für alle Mitspieler und kann nicht wiederhergestellt werden.`
+        ? `„${s.name}“ endgültig löschen? Der Spieltag verschwindet für alle Mitspieler und kann nicht wiederhergestellt werden.`
         : `„${s.name}“ aus deiner Liste entfernen? Mit dem Code ${s.code} kannst du jederzeit wieder beitreten.`,
     );
     if (!ok) return;
@@ -56,7 +56,7 @@ export default function SingleUse() {
 
   return (
     <>
-      <TopBar title="Einmal-Session" back="/" />
+      <TopBar title="Ohne Login" back="/" />
       <Page>
         <section className="mb-6">
           <h1 className="font-display font-extrabold text-3xl tracking-tight leading-tight" style={{ color: "var(--color-ink)" }}>
@@ -65,14 +65,14 @@ export default function SingleUse() {
             den alle sehen.
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Session starten, Code teilen – alle sehen live mit. Ganz ohne Konto.
+            Spieltag starten, Code teilen – alle sehen live mit. Ganz ohne Konto.
           </p>
         </section>
 
         {error && <div className="mb-4"><ErrorBox>{error}</ErrorBox></div>}
 
         <Link href="/new" className="btn btn-accent w-full !py-3.5 text-base mb-3">
-          <span className="text-lg leading-none">＋</span> Neue Session starten
+          <span className="text-lg leading-none">＋</span> Neuer Spieltag
         </Link>
 
         <form
@@ -90,17 +90,17 @@ export default function SingleUse() {
             autoCapitalize="characters"
             autoComplete="off"
             inputMode="text"
-            aria-label="Session-Code"
+            aria-label="Spieltag-Code"
           />
           <button className="btn btn-primary shrink-0" disabled={cleanCode.length !== 6}>
             Beitreten
           </button>
         </form>
 
-        <h2 className="mt-8 mb-3 font-display font-bold text-lg">Meine Sessions</h2>
+        <h2 className="mt-8 mb-3 font-display font-bold text-lg">Meine Spieltage</h2>
         <SessionList
           sessions={sessions}
-          empty="Noch keine. Sessions, die du startest oder denen du beitrittst, erscheinen hier."
+          empty="Noch keine. Spieltage, die du startest oder ansiehst, erscheinen hier."
           deleteLabel={(s) => (s.created_by === me ? "Für alle löschen" : "Aus meiner Liste entfernen")}
           onRemove={(s) => void remove(s)}
         />

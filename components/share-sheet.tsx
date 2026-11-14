@@ -31,11 +31,11 @@ export function ShareSheet({ open, onClose, code, name }: { open: boolean; onClo
   return (
     <Sheet open={open} onClose={onClose} title="Mitspieler einladen">
       <div className="card p-5 flex flex-col items-center gap-4">
-        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Session-Code</div>
+        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>Spieltag-Code</div>
         <div className="font-display font-extrabold text-4xl tracking-[0.25em] tabular" style={{ color: "var(--color-ink)" }}>{code}</div>
         {qr && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={qr} alt={`QR-Code für Session ${code}`} className="w-52 h-52 rounded-xl" />
+          <img src={qr} alt={`QR-Code für Spieltag ${code}`} className="w-52 h-52 rounded-xl" />
         )}
         <p className="text-xs text-center" style={{ color: "var(--color-text-muted)" }}>
           QR-Code scannen oder auf der Startseite den Code eingeben.

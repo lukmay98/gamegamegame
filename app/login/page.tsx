@@ -108,11 +108,11 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Brauche ich überhaupt einen Code?",
-    a: "Nein. Mit „Einmal-Session ohne Login“ auf der Startseite kannst du sofort losspielen. Dann kann aber nur das Gerät eintragen, auf dem die Session erstellt wurde, und Namen und Regeln werden nicht für das nächste Mal gemerkt.",
+    a: "Nein. Mit „Ohne Login spielen“ auf der Startseite kannst du sofort losspielen. Dann kann aber nur das Gerät eintragen, auf dem der Spieltag erstellt wurde, und Namen und Regeln werden nicht für das nächste Mal gemerkt.",
   },
   {
     q: "Können meine Mitspieler auch eintragen?",
-    a: "Mitspieler, die per QR-Code oder Session-Code beitreten, sehen alle Eingaben live, können aber nichts ändern. Eintragen kann, wer mit dem Spielecode angemeldet ist.",
+    a: "Mitspieler, die per QR-Code oder Spieltag-Code beitreten, sehen alle Eingaben live, können aber nichts ändern. Eintragen kann, wer mit dem Spielecode angemeldet ist.",
   },
   {
     q: "Kann ich mich auf mehreren Geräten anmelden?",

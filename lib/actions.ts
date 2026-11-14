@@ -88,7 +88,7 @@ export async function leaveSession(sessionId: string, userId: string) {
 export async function deleteSession(sessionId: string) {
   const { data, error } = await (await db()).from("sessions").delete().eq("id", sessionId).select("id");
   if (error) throw error;
-  if (!data || data.length === 0) throw new Error("Nur wer die Session angelegt hat, kann sie für alle löschen.");
+  if (!data || data.length === 0) throw new Error("Nur wer den Spieltag angelegt hat, kann ihn für alle löschen.");
 }
 
 export async function updateRound(roundId: string, patch: { phase?: "bidding" | "playing" | "done"; dealer_player_id?: string | null }) {
