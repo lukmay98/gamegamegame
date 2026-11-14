@@ -8,6 +8,7 @@ import { rank } from "@/lib/games/ranking";
 import type { LiveSession } from "@/lib/use-live-session";
 import { Leaderboard } from "./leaderboard";
 import { ScoreGrid } from "./score-grid";
+import { SettlePanel } from "./settle-panel";
 
 export interface GameResult {
   game: Game;
@@ -89,6 +90,7 @@ export function EveningBoard({ live, me, onSelectGame }: { live: LiveSession; me
         onSelect={onSelectGame}
         hint="Tippe auf ein Spiel, um es zu öffnen. Jedes Spiel wird mit seinen eigenen Regeln gewertet."
       />
+      <SettlePanel players={live.players} totals={totals} lowWins={lowWins} />
     </>
   );
 }

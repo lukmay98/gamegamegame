@@ -17,6 +17,7 @@ import {
 } from "./ftn.ts";
 import { freeTotals, targetReached } from "./free.ts";
 import { rank } from "./ranking.ts";
+import { payouts, transfers } from "./settle.ts";
 import type { Entry, Player, Round } from "./types.ts";
 
 const P = (id: string, seat: number): Player => ({ id, seat, name: id, session_id: "s", user_id: null });
@@ -143,4 +144,25 @@ test("free totals, target, ranking", () => {
     [1, 1, 3],
   );
   assert.equal(rank(players, totals, true)[0].player.id, "a");
+});
+
+test("settlement like the Excel sheet", () => {
+  const six = ["a", "b", "c", "d", "e", "f"].map((id, i) => ({ id, session_id: "s", name: id.toUpperCase(), seat: i + 1, user_id: null }));
+  const totals = { a: 63, b: 62, c: 57, d: 56, e: 54, f: 49 };
+  const p = payouts(six, totals, 100);
+  assert.deepEqual(p.map((x) => [x.player.id, x.cents / 100]), [["a", 37], ["b", 31], ["c", 1], ["d", -5], ["e", -17], ["f", -47]]);
+  assert.equal(p.reduce((s, x) => s + x.cents, 0), 0);
+  const t = transfers(p);
+  // alle Salden ausgeglichen
+  const bal: Record<string, number> = {};
+  for (const x of t) {
+    bal[x.from.id] = (bal[x.from.id] ?? 0) - x.cents;
+    bal[x.to.id] = (bal[x.to.id] ?? 0) + x.cents;
+  }
+  for (const x of p) assert.equal(bal[x.player.id] ?? 0, x.cents);
+  assert.ok(t.length <= 5);
+  // 0,10 € pro Punkt
+  assert.equal(payouts(six, totals, 10)[0].cents, 370);
+  // wenig gewinnt: Reihenfolge dreht sich
+  assert.equal(payouts(six, totals, 100, true)[0].player.id, "f");
 });

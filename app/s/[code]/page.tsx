@@ -210,7 +210,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
 
         {(saveError || error) && <div className="mb-3"><ErrorBox>{saveError ?? error}</ErrorBox></div>}
 
-        {games.length > 1 && (
+        {games.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 mb-4" role="tablist" aria-label="Spiele">
             {games.map((g) => {
               const sel = !showEvening && g.id === game?.id;
@@ -294,7 +294,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
           {!finished && !viewer && (
             <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setNewGame(true); }}>＋ Neues Spiel</button>
           )}
-          {games.length > 1 && (
+          {games.length > 0 && (
             <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Σ Gesamtstand Spieltag</button>
           )}
           {viewer ? null : finished ? (
