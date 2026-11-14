@@ -135,7 +135,8 @@ export function FtnBoard({
         </button>
       )}
 
-      {selected && (
+      {/* Nach Partie-Ende keine Rundenkarte mehr – nur wenn eine Runde im Spielblock angetippt wird */}
+      {selected && (!finished || selectedId) && (
         <RoundCard
           key={selected.id}
           round={selected}
@@ -149,7 +150,8 @@ export function FtnBoard({
           run={run}
           patchLocal={patchLocal}
           writerId={writerId}
-          onBackToCurrent={selected.id !== last?.id ? () => setSelectedId(null) : undefined}
+          onBackToCurrent={finished || selected.id !== last?.id ? () => setSelectedId(null) : undefined}
+          backLabel={finished ? "schließen" : "zur aktuellen Runde"}
         />
       )}
 
@@ -176,10 +178,10 @@ export function FtnBoard({
           totals={totals.totals}
           roundLabel={(r) => `${r.cards} K.`}
           totalSub={(p) => (totals.played[p.id] ? `${totals.hits[p.id]}/${totals.played[p.id]} ✓` : null)}
-          selectedId={selected?.id ?? null}
+          selectedId={finished && !selectedId ? null : (selected?.id ?? null)}
           onSelect={setSelectedId}
           highlightId={writerId}
-          hint={`Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen${viewer ? "" : " oder Korrigieren"}.`}
+          hint={`Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen${viewer || finished ? "" : " oder Korrigieren"}.`}
           cell={(r, p) => {
             const e = entries.find((x) => x.round_id === r.id && x.player_id === p.id);
             const pts = totals.perRound[r.id]?.[p.id];
@@ -263,6 +265,7 @@ function RoundCard({
   patchLocal,
   writerId,
   onBackToCurrent,
+  backLabel,
 }: {
   round: Round;
   isLast: boolean;
@@ -276,6 +279,7 @@ function RoundCard({
   patchLocal: PatchLocal;
   writerId: string | null;
   onBackToCurrent?: () => void;
+  backLabel: string;
 }) {
   const [editDone, setEditDone] = useState(false);
   const cards = round.cards ?? 1;
@@ -345,7 +349,7 @@ function RoundCard({
         <div className="flex flex-col items-end gap-1">
           {onBackToCurrent && (
             <button className="text-xs underline" style={{ color: "var(--color-ink-soft)" }} onClick={onBackToCurrent}>
-              zur aktuellen Runde
+              {backLabel}
             </button>
           )}
         </div>
