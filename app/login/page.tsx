@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { LegalLink } from "@/components/legal-link";
 import { ErrorBox, Page, TopBar } from "@/components/ui";
 import { loginAccount } from "@/lib/account";
@@ -81,8 +81,91 @@ export default function Login() {
             Code beim Entwickler anfragen
           </a>
         </p>
+        <Faq />
         <LegalLink />
       </Page>
     </>
+  );
+}
+
+const FAQ: { q: string; a: ReactNode }[] = [
+  {
+    q: "Was ist ein Spielecode?",
+    a: "Ein eigener Zugang für deine Spielrunde. Alle Spieltage, die du damit anlegst, bleiben gespeichert. Ein neuer Spieltag übernimmt automatisch Namen, Sitzreihenfolge und Regeln vom letzten.",
+  },
+  {
+    q: "Wie bekomme ich einen Spielecode?",
+    a: (
+      <>
+        Tippe oben auf „Code beim Entwickler anfragen“ – es öffnet sich deine Mail-App. Du bekommst Code und Startpasswort per Mail zurück.
+        Beim ersten Login legst du dein eigenes Passwort fest.
+      </>
+    ),
+  },
+  {
+    q: "Kostet das etwas?",
+    a: "Nein. GameGameGame ist ein privates, kostenloses Projekt ohne Werbung.",
+  },
+  {
+    q: "Brauche ich überhaupt einen Code?",
+    a: "Nein. Mit „Einmal-Session ohne Login“ auf der Startseite kannst du sofort losspielen. Dann kann aber nur das Gerät eintragen, auf dem die Session erstellt wurde, und Namen und Regeln werden nicht für das nächste Mal gemerkt.",
+  },
+  {
+    q: "Können meine Mitspieler auch eintragen?",
+    a: "Mitspieler, die per QR-Code oder Session-Code beitreten, sehen alle Eingaben live, können aber nichts ändern. Eintragen kann, wer mit dem Spielecode angemeldet ist.",
+  },
+  {
+    q: "Kann ich mich auf mehreren Geräten anmelden?",
+    a: "Ja. Du kannst dich mit deinem Code auf mehreren Handys anmelden und überall eintragen – praktisch, wenn ein Akku leer wird.",
+  },
+  {
+    q: "Ich habe mein Passwort vergessen.",
+    a: (
+      <>
+        Schreib eine kurze Mail an <a className="underline" href={`mailto:${OWNER.email}`}>{OWNER.email}</a>. Du bekommst ein neues Startpasswort und
+        legst danach wieder ein eigenes fest.
+      </>
+    ),
+  },
+  {
+    q: "Kann der Entwickler mein Passwort sehen?",
+    a: "Nein. Passwörter werden nur verschlüsselt gespeichert und können von niemandem gelesen werden – auch nicht vom Entwickler. Er kann es nur zurücksetzen.",
+  },
+  {
+    q: "Wie lösche ich meine Daten?",
+    a: "Einzelne Spieltage löschst du über den Papierkorb auf deiner Startseite. Soll der ganze Spielecode samt Daten gelöscht werden, genügt eine kurze Mail.",
+  },
+];
+
+function Faq() {
+  return (
+    <section className="mt-10">
+      <h2 className="font-display font-bold text-lg mb-3">Fragen &amp; Antworten</h2>
+      <div className="flex flex-col gap-2">
+        {FAQ.map((f) => (
+          <details key={f.q} className="card px-4 py-3 group">
+            <summary className="font-semibold cursor-pointer list-none flex items-center justify-between gap-3">
+              {f.q}
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="shrink-0 transition-transform group-open:rotate-180"
+                style={{ color: "var(--color-text-muted)" }}
+                aria-hidden
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <p className="text-sm mt-2 leading-relaxed" style={{ color: "var(--color-ink-soft)" }}>{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
   );
 }
