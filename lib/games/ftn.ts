@@ -1,4 +1,4 @@
-import type { Entry, FtnConfig, FtnScoring, Player, Round } from "./types";
+import type { DealerMode, Entry, FtnConfig, FtnScoring, Player, Round } from "./types";
 
 // "Fuck the Neighbour" in der Stiche-ansagen-Variante:
 // Jede Runde bekommt jeder Spieler N Karten, sagt an, wie viele Stiche er
@@ -22,29 +22,36 @@ export const FTN_PRESETS: Record<string, { label: string; hint: string; scoring:
   },
 };
 
-export const DECK_SIZE = 52;
+export const DEFAULT_DECK_SIZE = 36;
+
+export const DEALER_MODES: { id: DealerMode; label: string; hint: string }[] = [
+  { id: "order", label: "Der Reihe nach", hint: "Der nächste Platz nach dem letzten Geber" },
+  { id: "lastRoundWinner", label: "Gewinner der Vorrunde", hint: "Wer in der letzten Runde die meisten Punkte gemacht hat" },
+  { id: "leader", label: "Gesamtführender", hint: "Wer insgesamt vorne liegt" },
+];
 
 /** Fehlende Felder älterer Configs mit Standardwerten auffüllen. */
-export function normalizeFtnConfig(c: Partial<FtnConfig>): FtnConfig {
+export function normalizeFtnConfig(c: Partial<FtnConfig> & { decks?: number }): FtnConfig {
   return {
     maxCards: c.maxCards ?? 10,
     sequence: c.sequence ?? "up-down",
     scoring: c.scoring ?? FTN_PRESETS.classic.scoring,
     scoringPreset: c.scoringPreset ?? "classic",
     dealerRule: c.dealerRule ?? true,
-    decks: c.decks ?? 1,
+    deckSize: c.deckSize ?? (c.decks ? c.decks * 52 : DEFAULT_DECK_SIZE),
+    dealerMode: c.dealerMode ?? "order",
     peakTwice: c.peakTwice ?? false,
     zeroHit: c.zeroHit ?? null,
   };
 }
 
 export function defaultFtnConfig(playerCount: number): FtnConfig {
-  return normalizeFtnConfig({ maxCards: maxCardsFor(playerCount, 1) });
+  return normalizeFtnConfig({ maxCards: maxCardsFor(playerCount, DEFAULT_DECK_SIZE) });
 }
 
-/** Größtmögliche Kartenzahl pro Spieler bei `decks` × 52 Karten. */
-export function maxCardsFor(playerCount: number, decks = 1): number {
-  const total = DECK_SIZE * Math.max(1, decks);
+/** Größtmögliche Kartenzahl pro Spieler bei `deckSize` Karten insgesamt. */
+export function maxCardsFor(playerCount: number, deckSize = DEFAULT_DECK_SIZE): number {
+  const total = Math.max(1, Math.floor(deckSize));
   if (playerCount < 1) return total;
   return Math.max(1, Math.floor(total / playerCount));
 }
@@ -116,6 +123,35 @@ export function nextDealer(players: Player[], previousDealerId: string | null): 
   if (sorted.length === 0) return null;
   const idx = sorted.findIndex((p) => p.id === previousDealerId);
   return idx < 0 ? sorted[0] : sorted[(idx + 1) % sorted.length];
+}
+
+/**
+ * Vorschlag für den Geber der nächsten Runde.
+ * - order: Platz nach dem letzten Geber
+ * - lastRoundWinner: meiste Punkte in der letzten Runde
+ * - leader: meiste Punkte insgesamt
+ * Bei Gleichstand gewinnt, wer in Sitzreihenfolge nach dem letzten Geber zuerst kommt.
+ */
+export function suggestDealer(
+  mode: DealerMode,
+  players: Player[],
+  previousRound: Round | null,
+  totals: FtnTotals,
+): Player | null {
+  const sorted = [...players].sort((a, b) => a.seat - b.seat);
+  if (sorted.length === 0) return null;
+  const prevDealer = previousRound?.dealer_player_id ?? null;
+  if (mode === "order" || !previousRound) return nextDealer(sorted, prevDealer);
+
+  const score = (p: Player) =>
+    mode === "lastRoundWinner" ? (totals.perRound[previousRound.id]?.[p.id] ?? null) : totals.totals[p.id] ?? null;
+  const scored = sorted.filter((p) => score(p) != null);
+  if (scored.length === 0) return nextDealer(sorted, prevDealer);
+  const best = Math.max(...scored.map((p) => score(p) as number));
+  // Reihenfolge ab dem Platz nach dem letzten Geber, damit Gleichstände fair rotieren
+  const start = Math.max(0, sorted.findIndex((p) => p.id === prevDealer) + 1);
+  const rotated = [...sorted.slice(start), ...sorted.slice(0, start)];
+  return rotated.find((p) => score(p) === best) ?? null;
 }
 
 export interface FtnTotals {

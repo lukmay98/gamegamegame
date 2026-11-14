@@ -13,6 +13,7 @@ import {
   needsTricks,
   nextDealer,
   normalizeFtnConfig,
+  suggestDealer,
 } from "./ftn.ts";
 import { freeTotals, targetReached } from "./free.ts";
 import { rank } from "./ranking.ts";
@@ -40,16 +41,19 @@ test("card plan", () => {
   assert.equal(cardsForRound(cfg, 99), 1);
 });
 
-test("max cards with decks", () => {
-  assert.equal(maxCardsFor(4), 13);
-  assert.equal(maxCardsFor(5), 10);
-  assert.equal(maxCardsFor(6, 2), 17);
-  assert.equal(maxCardsFor(12, 3), 13);
+test("max cards with deck size", () => {
+  assert.equal(maxCardsFor(4), 9); // Standard 36 Karten
+  assert.equal(maxCardsFor(5), 7);
+  assert.equal(maxCardsFor(4, 52), 13);
+  assert.equal(maxCardsFor(6, 104), 17);
+  assert.equal(maxCardsFor(3, 32), 10);
 });
 
 test("normalize old config", () => {
   const c = normalizeFtnConfig({ maxCards: 7, sequence: "up" });
-  assert.equal(c.decks, 1);
+  assert.equal(c.deckSize, 36);
+  assert.equal(c.dealerMode, "order");
+  assert.equal(normalizeFtnConfig({ decks: 2 } as never).deckSize, 104);
   assert.equal(c.peakTwice, false);
   assert.equal(c.zeroHit, null);
 });
@@ -84,6 +88,32 @@ test("next dealer and bidding order", () => {
   assert.equal(nextDealer(players, "a")?.id, "b");
   assert.equal(nextDealer(players, "c")?.id, "a");
   assert.deepEqual(biddingOrder(players, "b").map((p) => p.id), ["c", "a", "b"]);
+});
+
+test("suggest dealer", () => {
+  const cfg = defaultFtnConfig(3);
+  const r1: Round = { ...R("r1", 1, 1, "done"), dealer_player_id: "a" };
+  const r2: Round = { ...R("r2", 2, 2, "done"), dealer_player_id: "b" };
+  const entries = [
+    E("r1", "a", { bid: 0, hit: true }), // 10
+    E("r1", "b", { bid: 1, hit: true }), // 11
+    E("r1", "c", { bid: 0, hit: false }), // 0
+    E("r2", "a", { bid: 2, hit: true }), // 12  → gesamt 22
+    E("r2", "b", { bid: 1, hit: false }), // 0   → gesamt 11
+    E("r2", "c", { bid: 0, hit: true }), // 10  → gesamt 10
+  ];
+  const t = ftnTotals(cfg, players, [r1, r2], entries);
+  assert.equal(suggestDealer("order", players, r2, t)?.id, "c");
+  assert.equal(suggestDealer("lastRoundWinner", players, r2, t)?.id, "a");
+  assert.equal(suggestDealer("leader", players, r2, t)?.id, "a");
+  assert.equal(suggestDealer("leader", players, null, t)?.id, "a");
+  // Gleichstand in Runde 1 zwischen niemandem; nach r1 führt b
+  const t1 = ftnTotals(cfg, players, [r1], entries);
+  assert.equal(suggestDealer("leader", players, r1, t1)?.id, "b");
+  // Gleichstand: ab Platz nach letztem Geber (b) → c vor a
+  const tie = ftnTotals(cfg, players, [r1], [E("r1", "a", { bid: 0, hit: true }), E("r1", "b", { bid: 0, hit: false }), E("r1", "c", { bid: 0, hit: true })]);
+  const r1b: Round = { ...r1, dealer_player_id: "b" };
+  assert.equal(suggestDealer("lastRoundWinner", players, r1b, tie)?.id, "c");
 });
 
 test("totals only count finished rounds", () => {

@@ -45,6 +45,8 @@ export interface Entry {
 }
 
 // ── Fuck the Neighbour (Stiche ansagen) ──────────────────────
+export type DealerMode = "order" | "lastRoundWinner" | "leader";
+
 export type FtnSequence = "up-down" | "up" | "down" | "constant";
 
 export interface FtnScoring {
@@ -66,8 +68,10 @@ export interface FtnConfig {
   scoringPreset: string;
   /** Geber darf nicht so ansagen, dass Summe der Ansagen = Karten */
   dealerRule: boolean;
-  /** Anzahl 52er-Kartenspiele (1–3) */
-  decks: number;
+  /** Gesamtzahl der Karten im Spiel (z. B. 36, 52, 104) */
+  deckSize: number;
+  /** Wie der nächste Geber vorgeschlagen wird (manuell immer änderbar) */
+  dealerMode: DealerMode;
   /** Höchste Runde zweimal spielen */
   peakTwice: boolean;
   /** Punkte für getroffene Null-Ansage; null = normale Treffer-Formel */

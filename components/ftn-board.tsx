@@ -5,13 +5,14 @@ import { createRound, deleteRound, finishRound, reopenBids, setSessionStatus, up
 import type { Entry, FtnConfig, Player, Round } from "@/lib/games";
 import {
   biddingOrder,
+  DEALER_MODES,
   cardPlan,
   entryPoints,
   forbiddenDealerBid,
   ftnTotals,
   needsTricks,
-  nextDealer,
   normalizeFtnConfig,
+  suggestDealer,
 } from "@/lib/games/ftn";
 import type { LiveSession } from "@/lib/use-live-session";
 import { errorText } from "@/lib/supabase";
@@ -65,7 +66,7 @@ export function FtnBoard({
   async function nextRound() {
     const n = (last?.round_number ?? 0) + 1;
     const cards = plan[Math.min(n, plan.length) - 1];
-    const dealer = nextDealer(sortedPlayers, last?.dealer_player_id ?? null);
+    const dealer = suggestDealer(config.dealerMode, sortedPlayers, last, totals);
     setBusy(true);
     await run(async () => {
       const id = await createRound(session.id, n, cards, dealer?.id ?? null);
@@ -274,7 +275,10 @@ function RoundCard({
       {/* Geber-Auswahl */}
       <div className="mt-3">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="label !mb-0">Geber</span>
+          <span className="label !mb-0">
+            Geber
+            <span className="font-normal ml-1">· Vorschlag: {DEALER_MODES.find((m) => m.id === config.dealerMode)?.label}</span>
+          </span>
           {!readOnly && (
             <button className="text-xs font-semibold underline" style={{ color: "var(--color-ink-soft)" }} onClick={onOpenPlayers}>
               Sitzordnung ändern
