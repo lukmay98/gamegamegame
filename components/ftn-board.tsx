@@ -17,7 +17,7 @@ import {
 import type { LiveSession } from "@/lib/use-live-session";
 import { errorText } from "@/lib/supabase";
 import { Leaderboard } from "./leaderboard";
-import { ErrorBox } from "./ui";
+import { ErrorBox, Stepper } from "./ui";
 
 type EntryPatch = Partial<Pick<Entry, "bid" | "tricks" | "hit">>;
 type SaveFn = (round: Round, player: Player, patch: EntryPatch) => void;
@@ -190,8 +190,6 @@ function RoundCard({
   onBackToCurrent?: () => void;
 }) {
   const [editDone, setEditDone] = useState(false);
-  // null = automatisch (nächster ohne Ansage), "__none__" = alle zu, sonst Spieler-ID
-  const [picked, setPicked] = useState<string | null>(null);
   const cards = round.cards ?? 1;
   const phase = round.phase;
   const order = biddingOrder(players, round.dealer_player_id);
@@ -207,9 +205,6 @@ function RoundCard({
   const dealerViolates = forbidden != null && dealer != null && entry(dealer.id)?.bid === forbidden;
   const allBids = players.length > 0 && players.every((p) => entry(p.id)?.bid != null);
   const diff = bidSum - cards;
-
-  const activeBidder =
-    picked === "__none__" ? null : (picked ?? (phase === "bidding" ? order.find((p) => entry(p.id)?.bid == null)?.id ?? null : null));
 
   // Spieler, die in dieser Runde angesagt haben (wichtig, falls jemand später dazukommt)
   const bidders = order.filter((p) => entry(p.id)?.bid != null);
@@ -315,60 +310,30 @@ function RoundCard({
       {/* Phase 1: Ansagen */}
       {(phase === "bidding" || (phase === "done" && editDone)) && (
         <>
-          <ul className="flex flex-col gap-2 mt-3">
+          <ul className="flex flex-col mt-2">
             {order.map((p) => {
               const e = entry(p.id);
               const isDealer = p.id === dealer?.id;
               const mine = p.user_id != null && p.user_id === me;
-              const open = !readOnly && p.id === activeBidder;
-              const has = e?.bid != null;
               return (
-                <li key={p.id}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={open}
-                    onClick={() => !readOnly && setPicked(open ? "__none__" : p.id)}
-                    onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && !readOnly && setPicked(open ? "__none__" : p.id)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 border-2 select-none cursor-pointer transition-colors"
-                    style={{
-                      borderColor: open ? "var(--color-ink)" : "var(--color-border)",
-                      background: "var(--color-surface)",
-                    }}
-                  >
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center font-display font-extrabold text-xl tabular shrink-0"
-                      style={{
-                        background: has ? "var(--color-ink)" : "var(--color-surface-soft)",
-                        color: has ? "white" : "var(--color-text-muted)",
-                        border: has ? "none" : "1.5px dashed var(--color-border)",
-                      }}
-                    >
-                      {e?.bid ?? "?"}
+                <li key={p.id} className="flex items-center gap-3 py-2 border-b last:border-b-0" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">
+                      {p.name}
+                      {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate">
-                        {p.name}
-                        {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
-                      </div>
-                      <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
-                        {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
-                        {isDealer && forbidden != null && phase === "bidding" && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
-                        {!isDealer && (has ? `${e!.bid} angesagt` : open ? "Ansage wählen" : "noch offen")}
-                      </div>
+                    <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
+                      {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
+                      {isDealer && forbidden != null && phase === "bidding" && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
                     </div>
                   </div>
-                  {open && (
-                    <NumberPicker
-                      max={cards}
-                      value={e?.bid ?? null}
-                      forbidden={isDealer && phase === "bidding" ? forbidden : null}
-                      onPick={(v) => {
-                        save(round, p, { bid: v });
-                        setPicked(null);
-                      }}
-                    />
-                  )}
+                  <Stepper
+                    value={e?.bid ?? null}
+                    max={cards}
+                    forbidden={isDealer && phase === "bidding" ? forbidden : null}
+                    disabled={readOnly}
+                    onChange={(v) => save(round, p, { bid: v })}
+                  />
                 </li>
               );
             })}
@@ -446,12 +411,18 @@ function RoundCard({
                       </span>
                     )}
                   </div>
-                  {miss && askTricks && !readOnly && (
-                    <div className="mt-1.5">
-                      <p className="text-xs font-semibold mb-1 px-1" style={{ color: "var(--color-accent)" }}>
-                        Wie viele Stiche hat {p.name} gemacht?
-                      </p>
-                      <NumberPicker max={cards} value={e.tricks ?? null} forbidden={e.bid} onPick={(v) => save(round, p, { tricks: v })} />
+                  {miss && askTricks && (
+                    <div className="flex items-center justify-end gap-2 mt-1.5 pr-1" onClick={(ev) => ev.stopPropagation()}>
+                      <span className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>
+                        Wie viele Stiche?
+                      </span>
+                      <Stepper
+                        value={e.tricks ?? null}
+                        max={cards}
+                        forbidden={e.bid}
+                        disabled={readOnly}
+                        onChange={(v) => save(round, p, { tricks: v })}
+                      />
                     </div>
                   )}
                 </li>
@@ -576,49 +547,5 @@ function ScoreTable({
       </div>
       <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>Ansage und ✓/✗ unter den Punkten. Runde antippen zum Ansehen oder Korrigieren.</p>
     </section>
-  );
-}
-
-/** Zahlen zum direkten Antippen (statt Plus/Minus). */
-function NumberPicker({
-  max,
-  value,
-  forbidden,
-  onPick,
-}: {
-  max: number;
-  value: number | null;
-  forbidden?: number | null;
-  onPick: (v: number) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5 mt-1.5 px-1">
-      {Array.from({ length: max + 1 }, (_, n) => {
-        const isForbidden = n === forbidden;
-        const selected = n === value;
-        return (
-          <button
-            key={n}
-            type="button"
-            disabled={isForbidden}
-            onClick={(ev) => {
-              ev.stopPropagation();
-              onPick(n);
-            }}
-            className="w-11 h-11 rounded-xl font-display font-bold text-lg tabular border transition-transform active:scale-95"
-            style={{
-              background: selected ? "var(--color-ink)" : "var(--color-surface)",
-              color: isForbidden ? "var(--color-accent)" : selected ? "white" : "var(--color-ink)",
-              borderColor: isForbidden ? "var(--color-accent-soft)" : selected ? "var(--color-ink)" : "var(--color-border)",
-              textDecoration: isForbidden ? "line-through" : undefined,
-              opacity: isForbidden ? 0.6 : 1,
-            }}
-            aria-label={isForbidden ? `${n} (nicht erlaubt)` : String(n)}
-          >
-            {n}
-          </button>
-        );
-      })}
-    </div>
   );
 }
