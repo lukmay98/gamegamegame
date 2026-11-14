@@ -14,6 +14,17 @@ export interface Session {
   finished_at: string | null;
 }
 
+/** Eine Partie innerhalb eines Spieltags (Session) mit eigenen, festen Regeln. */
+export interface Game {
+  id: string;
+  session_id: string;
+  number: number;
+  config: FtnConfig | FreeConfig;
+  status: SessionStatus;
+  created_at: string;
+  finished_at: string | null;
+}
+
 export interface Player {
   id: string;
   session_id: string;
@@ -25,6 +36,7 @@ export interface Player {
 export interface Round {
   id: string;
   session_id: string;
+  game_id: string;
   round_number: number;
   cards: number | null;
   dealer_player_id: string | null;

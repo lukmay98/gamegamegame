@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createRound, deleteRound, finishRound, reopenBids, setSessionStatus, updateRound } from "@/lib/actions";
-import type { Entry, FtnConfig, Player, Round } from "@/lib/games";
+import { createRound, deleteRound, finishRound, reopenBids, setGameStatus, updateRound } from "@/lib/actions";
+import type { Entry, FtnConfig, Game, Player, Round } from "@/lib/games";
 import {
   biddingOrder,
   DEALER_MODES,
@@ -26,6 +26,8 @@ type PatchLocal = (roundId: string, roundPatch: Partial<Round>, entryPatch?: (e:
 
 export function FtnBoard({
   live,
+  game,
+  onNewGame,
   me,
   save,
   refresh,
@@ -33,6 +35,8 @@ export function FtnBoard({
   patchLocal,
 }: {
   live: LiveSession;
+  game: Game;
+  onNewGame: () => void;
   me: string | null;
   save: SaveFn;
   refresh: () => void;
@@ -40,8 +44,8 @@ export function FtnBoard({
   patchLocal: PatchLocal;
 }) {
   const { session, players, rounds, entries } = live;
-  const config = useMemo(() => normalizeFtnConfig(session.config as Partial<FtnConfig>), [session.config]);
-  const finished = session.status === "finished";
+  const config = useMemo(() => normalizeFtnConfig(game.config as Partial<FtnConfig>), [game.config]);
+  const finished = game.status === "finished" || session.status === "finished";
   const sortedPlayers = useMemo(() => [...players].sort((a, b) => a.seat - b.seat), [players]);
   const plan = useMemo(() => cardPlan(config), [config]);
   const totals = useMemo(() => ftnTotals(config, sortedPlayers, rounds, entries), [config, sortedPlayers, rounds, entries]);
@@ -70,7 +74,7 @@ export function FtnBoard({
     const dealer = suggestDealer(config.dealerMode, sortedPlayers, last, totals);
     setBusy(true);
     await run(async () => {
-      const id = await createRound(session.id, n, cards, dealer?.id ?? null);
+      const id = await createRound(session.id, game.id, n, cards, dealer?.id ?? null);
       setSelectedId(id);
     });
     setBusy(false);
@@ -82,7 +86,7 @@ export function FtnBoard({
     await run(() => deleteRound(last.id));
   }
 
-  const finish = () => run(() => setSessionStatus(session.id, "finished"));
+  const finish = () => run(() => setGameStatus(game.id, "finished"));
 
   return (
     <>
@@ -94,6 +98,17 @@ export function FtnBoard({
       />
 
       {error && <div className="mb-3"><ErrorBox>{error}</ErrorBox></div>}
+
+      {game.status === "finished" && session.status !== "finished" && (
+        <div className="flex gap-2 mb-5">
+          <button className="btn btn-accent flex-1 !py-3.5 text-base" onClick={onNewGame}>
+            ＋ Neue Partie
+          </button>
+          <button className="btn btn-ghost" onClick={() => void run(() => setGameStatus(game.id, "active"))}>
+            Wieder öffnen
+          </button>
+        </div>
+      )}
 
       {!finished && !last && (
         <button className="btn btn-accent w-full !py-3.5 text-base mb-5" disabled={busy || players.length < 1} onClick={nextRound}>

@@ -294,3 +294,114 @@ begin
   begin alter publication supabase_realtime add table rounds;   exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table entries;  exception when duplicate_object then null; end;
 end $$;
+
+-- ═════════════════════════════════════════════════════════════
+-- PARTIEN (seit Paket 4): Eine Session ist ein Spieltag mit
+-- mehreren Partien. Jede Partie hat ihre eigenen, festen Regeln.
+-- ═════════════════════════════════════════════════════════════
+create table if not exists games (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references sessions(id) on delete cascade,
+  number int not null check (number >= 1),
+  config jsonb not null default '{}'::jsonb,
+  status text not null default 'active' check (status in ('active', 'finished')),
+  created_at timestamptz not null default now(),
+  finished_at timestamptz,
+  unique (session_id, number)
+);
+create index if not exists games_session_idx on games (session_id);
+alter table games replica identity full;
+alter table games enable row level security;
+drop policy if exists "members manage games" on games;
+create policy "members manage games" on games
+  for all to authenticated using (is_member(session_id)) with check (is_member(session_id));
+
+alter table rounds add column if not exists game_id uuid references games(id) on delete cascade;
+
+-- Altbestand: je Session eine Partie 1
+insert into games (session_id, number, config, status, created_at, finished_at)
+select s.id, 1, s.config, s.status, s.created_at, s.finished_at
+from sessions s
+where not exists (select 1 from games g where g.session_id = s.id);
+update rounds r set game_id = g.id
+from games g
+where g.session_id = r.session_id and g.number = 1 and r.game_id is null;
+
+-- Rundennummern gelten pro Partie
+alter table rounds drop constraint if exists rounds_session_id_round_number_key;
+do $$ begin
+  alter table rounds add constraint rounds_game_id_round_number_key unique (game_id, round_number);
+exception when duplicate_object or duplicate_table then null; end $$;
+create index if not exists rounds_game_idx on rounds (game_id);
+
+-- Runde ohne Partie → neueste Partie der Session
+create or replace function rounds_default_game()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.game_id is null then
+    select id into new.game_id from games where session_id = new.session_id order by number desc limit 1;
+  end if;
+  if new.game_id is null then
+    raise exception 'Keine Partie für diese Session';
+  end if;
+  if not exists (select 1 from games g where g.id = new.game_id and g.session_id = new.session_id) then
+    raise exception 'Partie gehört nicht zu dieser Session';
+  end if;
+  return new;
+end $$;
+drop trigger if exists rounds_default_game on rounds;
+create trigger rounds_default_game before insert or update of game_id on rounds
+  for each row execute function rounds_default_game();
+revoke all on function rounds_default_game() from public, anon, authenticated;
+alter table rounds alter column game_id set not null;
+
+-- Session anlegen legt zusätzlich Partie 1 an
+create or replace function create_session(
+  p_name text,
+  p_game text,
+  p_config jsonb,
+  p_players text[]
+) returns text
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_code text;
+  v_id uuid;
+  v_alphabet text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  v_name text;
+  v_seat int := 0;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+  if coalesce(array_length(p_players, 1), 0) < 1 then
+    raise exception 'Mindestens ein Spieler nötig';
+  end if;
+  loop
+    v_code := '';
+    for i in 1..6 loop
+      v_code := v_code || substr(v_alphabet, 1 + floor(random() * length(v_alphabet))::int, 1);
+    end loop;
+    exit when not exists (select 1 from sessions where code = v_code);
+  end loop;
+  insert into sessions (code, name, game, config, created_by)
+  values (v_code, coalesce(nullif(trim(p_name), ''), 'Spielabend'), p_game, coalesce(p_config, '{}'::jsonb), auth.uid())
+  returning id into v_id;
+  insert into games (session_id, number, config) values (v_id, 1, coalesce(p_config, '{}'::jsonb));
+  insert into session_members (session_id, user_id) values (v_id, auth.uid());
+  foreach v_name in array p_players loop
+    if length(trim(v_name)) > 0 then
+      v_seat := v_seat + 1;
+      insert into players (session_id, name, seat, user_id)
+      values (v_id, trim(v_name), v_seat, case when v_seat = 1 then auth.uid() else null end);
+    end if;
+  end loop;
+  return v_code;
+end;
+$$;
+revoke all on function create_session(text, text, jsonb, text[]) from public, anon;
+grant execute on function create_session(text, text, jsonb, text[]) to authenticated;
+
+do $$ begin
+  begin alter publication supabase_realtime add table games; exception when duplicate_object then null; end;
+end $$;

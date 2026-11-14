@@ -27,10 +27,16 @@ export async function saveEntries(patches: EntryPatch[]) {
  * Neue Runde anlegen. Wenn zwei Geräte gleichzeitig tippen, gewinnt eines;
  * das andere bekommt einen Duplikat-Fehler, den wir ignorieren.
  */
-export async function createRound(sessionId: string, roundNumber: number, cards: number | null, dealerId: string | null) {
+export async function createRound(
+  sessionId: string,
+  gameId: string,
+  roundNumber: number,
+  cards: number | null,
+  dealerId: string | null,
+) {
   const { data, error } = await (await db())
     .from("rounds")
-    .insert({ session_id: sessionId, round_number: roundNumber, cards, dealer_player_id: dealerId })
+    .insert({ session_id: sessionId, game_id: gameId, round_number: roundNumber, cards, dealer_player_id: dealerId })
     .select("id")
     .single();
   if (error && error.code !== "23505") throw error;
@@ -106,4 +112,22 @@ export async function finishRound(roundId: string) {
   if (r1.error) throw r1.error;
   const r2 = await sb.from("rounds").update({ phase: "done" }).eq("id", roundId);
   if (r2.error) throw r2.error;
+}
+
+/** Neue Partie im Spieltag anlegen; die Regeln werden auch als Vorlage für die nächste Partie gemerkt. */
+export async function createGame(sessionId: string, number: number, config: object) {
+  const sb = await db();
+  const { data, error } = await sb.from("games").insert({ session_id: sessionId, number, config }).select("id").single();
+  if (error && error.code !== "23505") throw error;
+  const r2 = await sb.from("sessions").update({ config }).eq("id", sessionId);
+  if (r2.error) throw r2.error;
+  return (data?.id as string | undefined) ?? null;
+}
+
+export async function setGameStatus(gameId: string, status: "active" | "finished") {
+  const { error } = await (await db())
+    .from("games")
+    .update({ status, finished_at: status === "finished" ? new Date().toISOString() : null })
+    .eq("id", gameId);
+  if (error) throw error;
 }

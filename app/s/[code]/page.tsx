@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FreeBoard } from "@/components/free-board";
+import { EveningBoard } from "@/components/evening-board";
+import { NewGameSheet } from "@/components/new-game-sheet";
 import { FtnBoard } from "@/components/ftn-board";
 import { PlayersSheet } from "@/components/players-sheet";
 import { ShareSheet } from "@/components/share-sheet";
@@ -172,6 +174,9 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
   const [menu, setMenu] = useState(false);
   const [playersOpen, setPlayersOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // null = neueste Partie, "evening" = Abend-Gesamtstand, sonst Game-ID
+  const [tab, setTab] = useState<string | null>(null);
+  const [newGame, setNewGame] = useState(false);
 
   // Optimistisch lokal setzen, dann speichern; Realtime gleicht danach ab.
   const saveFtn = useCallback(
@@ -226,8 +231,14 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
     );
   }
 
-  const { session } = data;
+  const { session, games } = data;
   const finished = session.status === "finished";
+  const game = games.find((g) => g.id === tab) ?? games.at(-1) ?? null;
+  const showEvening = tab === "evening" && games.length > 0;
+  // Ansicht nur auf die gewählte Partie beschränken
+  const gameRounds = game ? data.rounds.filter((r) => r.game_id === game.id) : [];
+  const gameRoundIds = new Set(gameRounds.map((r) => r.id));
+  const gameLive = { ...data, rounds: gameRounds, entries: data.entries.filter((e) => gameRoundIds.has(e.round_id)) };
 
   return (
     <>
@@ -268,13 +279,70 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
 
         {(saveError || error) && <div className="mb-3"><ErrorBox>{saveError ?? error}</ErrorBox></div>}
 
-        {session.game === "ftn" ? (
-          <FtnBoard live={data} me={me} save={saveFtn} refresh={() => void refresh()} onOpenPlayers={() => setPlayersOpen(true)} patchLocal={patchLocal} />
+        {games.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 mb-4" role="tablist" aria-label="Partien">
+            {games.map((g) => {
+              const sel = !showEvening && g.id === game?.id;
+              return (
+                <button
+                  key={g.id}
+                  role="tab"
+                  aria-selected={sel}
+                  className="chip shrink-0 !py-1.5"
+                  style={sel ? { background: "var(--color-ink)", color: "white" } : { background: "var(--color-surface-soft)", color: "var(--color-ink)" }}
+                  onClick={() => setTab(g.id)}
+                >
+                  Partie {g.number}
+                  {g.status === "finished" ? " ✓" : " · läuft"}
+                </button>
+              );
+            })}
+            <button
+              role="tab"
+              aria-selected={showEvening}
+              className="chip shrink-0 !py-1.5"
+              style={showEvening ? { background: "var(--color-accent)", color: "white" } : { background: "var(--color-accent-soft)", color: "var(--color-ink)" }}
+              onClick={() => setTab("evening")}
+            >
+              Σ Abend
+            </button>
+          </div>
+        )}
+
+        {showEvening ? (
+          <EveningBoard live={data} me={me} onSelectGame={setTab} />
+        ) : !game ? (
+          <Spinner />
+        ) : session.game === "ftn" ? (
+          <FtnBoard
+            key={game.id}
+            live={gameLive}
+            game={game}
+            onNewGame={() => setNewGame(true)}
+            me={me}
+            save={saveFtn}
+            refresh={() => void refresh()}
+            onOpenPlayers={() => setPlayersOpen(true)}
+            patchLocal={patchLocal}
+          />
         ) : (
-          <FreeBoard live={data} me={me} refresh={() => void refresh()} />
+          <FreeBoard key={game.id} live={gameLive} game={game} onNewGame={() => setNewGame(true)} me={me} refresh={() => void refresh()} />
         )}
       </Page>
 
+      <NewGameSheet
+        open={newGame}
+        onClose={() => setNewGame(false)}
+        sessionId={session.id}
+        game={session.game}
+        games={games}
+        playerCount={data.players.length}
+        onCreated={(id) => {
+          setNewGame(false);
+          setTab(id);
+          void refresh();
+        }}
+      />
       <ShareSheet open={share} onClose={() => setShare(false)} code={session.code} name={session.name} />
       <PlayersSheet
         open={playersOpen}
@@ -289,10 +357,16 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         <div className="flex flex-col gap-2">
           <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setPlayersOpen(true); }}>👥 Spieler verwalten</button>
           <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setShare(true); }}>🔗 Code & QR teilen</button>
+          {!finished && (
+            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setNewGame(true); }}>＋ Neue Partie</button>
+          )}
+          {games.length > 1 && (
+            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Σ Abend-Gesamtstand</button>
+          )}
           {finished ? (
-            <button className="btn btn-ghost justify-start" onClick={() => void setSessionStatus(session.id, "active").then(refresh)}>↩︎ Session wieder öffnen</button>
+            <button className="btn btn-ghost justify-start" onClick={() => void setSessionStatus(session.id, "active").then(refresh)}>↩︎ Spieltag wieder öffnen</button>
           ) : (
-            <button className="btn btn-ghost justify-start" onClick={() => confirm("Session beenden? Danach ist sie nur noch lesbar.") && void setSessionStatus(session.id, "finished").then(() => { setMenu(false); void refresh(); })}>🏁 Session beenden</button>
+            <button className="btn btn-ghost justify-start" onClick={() => confirm("Spieltag beenden? Danach ist er nur noch lesbar.") && void setSessionStatus(session.id, "finished").then(() => { setMenu(false); void refresh(); })}>🏁 Spieltag beenden</button>
           )}
           {me && session.created_by !== me && (
             <button

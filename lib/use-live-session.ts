@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ensureSignedIn, errorText, supabase } from "./supabase";
-import type { Entry, Player, Round, Session } from "./games/types";
+import type { Entry, Game, Player, Round, Session } from "./games/types";
 
 export interface LiveSession {
   session: Session;
+  games: Game[];
   players: Player[];
   rounds: Round[];
   entries: Entry[];
@@ -25,13 +26,14 @@ export function useLiveSession(sessionId: string | null) {
   const load = useCallback(async () => {
     if (!sessionId) return;
     const sb = supabase();
-    const [s, p, r, e] = await Promise.all([
+    const [s, g, p, r, e] = await Promise.all([
       sb.from("sessions").select("*").eq("id", sessionId).single(),
+      sb.from("games").select("*").eq("session_id", sessionId).order("number"),
       sb.from("players").select("*").eq("session_id", sessionId).order("seat"),
       sb.from("rounds").select("*").eq("session_id", sessionId).order("round_number"),
       sb.from("entries").select("*").eq("session_id", sessionId),
     ]);
-    const err = s.error ?? p.error ?? r.error ?? e.error;
+    const err = s.error ?? g.error ?? p.error ?? r.error ?? e.error;
     if (err) {
       setError(errorText(err));
       return;
@@ -39,6 +41,7 @@ export function useLiveSession(sessionId: string | null) {
     setError(null);
     setData({
       session: s.data as Session,
+      games: (g.data ?? []) as Game[],
       players: (p.data ?? []) as Player[],
       rounds: (r.data ?? []) as Round[],
       entries: (e.data ?? []) as Entry[],
@@ -66,6 +69,7 @@ export function useLiveSession(sessionId: string | null) {
         .on("postgres_changes", { event: "*", schema: "public", table: "entries", filter }, refresh)
         .on("postgres_changes", { event: "*", schema: "public", table: "rounds", filter }, refresh)
         .on("postgres_changes", { event: "*", schema: "public", table: "players", filter }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "games", filter }, refresh)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "sessions", filter: `id=eq.${sessionId}` },

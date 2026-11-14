@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createRound, deleteRound, saveEntries, setSessionStatus } from "@/lib/actions";
-import type { FreeConfig, Round } from "@/lib/games";
+import { createRound, deleteRound, saveEntries, setGameStatus } from "@/lib/actions";
+import type { FreeConfig, Game, Round } from "@/lib/games";
 import { freeTotals, targetReached } from "@/lib/games/free";
 import { errorText } from "@/lib/supabase";
 import type { LiveSession } from "@/lib/use-live-session";
@@ -10,10 +10,22 @@ import { Leaderboard } from "./leaderboard";
 import { ScoreGrid } from "./score-grid";
 import { ErrorBox } from "./ui";
 
-export function FreeBoard({ live, me, refresh }: { live: LiveSession; me: string | null; refresh: () => void }) {
+export function FreeBoard({
+  live,
+  game,
+  onNewGame,
+  me,
+  refresh,
+}: {
+  live: LiveSession;
+  game: Game;
+  onNewGame: () => void;
+  me: string | null;
+  refresh: () => void;
+}) {
   const { session, players, rounds, entries } = live;
-  const config = session.config as FreeConfig;
-  const finished = session.status === "finished";
+  const config = game.config as FreeConfig;
+  const finished = game.status === "finished" || session.status === "finished";
   const totals = useMemo(() => freeTotals(players, rounds, entries), [players, rounds, entries]);
   const reached = targetReached(config, totals);
   // "new" = neue Runde, sonst Round-ID, null = Editor zu
@@ -22,7 +34,7 @@ export function FreeBoard({ live, me, refresh }: { live: LiveSession; me: string
 
   async function finish() {
     try {
-      await setSessionStatus(session.id, "finished");
+      await setGameStatus(game.id, "finished");
       refresh();
     } catch (e) {
       setError(errorText(e));
@@ -42,9 +54,24 @@ export function FreeBoard({ live, me, refresh }: { live: LiveSession; me: string
       )}
       {error && <div className="mb-3"><ErrorBox>{error}</ErrorBox></div>}
 
+      {game.status === "finished" && session.status !== "finished" && (
+        <div className="flex gap-2 mb-5">
+          <button className="btn btn-accent flex-1 !py-3.5 text-base" onClick={onNewGame}>
+            ＋ Neue Partie
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => void setGameStatus(game.id, "active").then(refresh, (e) => setError(errorText(e)))}
+          >
+            Wieder öffnen
+          </button>
+        </div>
+      )}
+
       {!finished && editing && (
         <RoundForm
           key={editing}
+          gameId={game.id}
           round={editRound}
           live={live}
           onDone={() => {
@@ -92,11 +119,13 @@ export function FreeBoard({ live, me, refresh }: { live: LiveSession; me: string
 }
 
 function RoundForm({
+  gameId,
   round,
   live,
   onDone,
   onCancel,
 }: {
+  gameId: string;
   round: Round | null;
   live: LiveSession;
   onDone: () => void;
@@ -126,7 +155,7 @@ function RoundForm({
       let roundId = round?.id ?? null;
       if (!roundId) {
         const n = (rounds.at(-1)?.round_number ?? 0) + 1;
-        roundId = await createRound(session.id, n, null, null);
+        roundId = await createRound(session.id, gameId, n, null, null);
         if (!roundId) throw new Error("Jemand anderes hat gerade eine Runde angelegt. Bitte nochmal speichern.");
       }
       await saveEntries(
