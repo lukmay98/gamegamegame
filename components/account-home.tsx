@@ -64,9 +64,11 @@ export function AccountHome({ account }: { account: Account }) {
             Deine Spieltage
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            {last
-              ? "Ein neuer Spieltag übernimmt Namen, Reihenfolge und Regeln vom letzten."
-              : "Starte deinen ersten Spieltag. Mitspieler sehen per QR-Code live zu."}
+            {sessions == null
+              ? "\u00a0"
+              : last
+                ? "Ein neuer Spieltag übernimmt Namen, Reihenfolge und Regeln vom letzten."
+                : "Starte deinen ersten Spieltag. Mitspieler sehen per QR-Code live zu."}
           </p>
         </section>
 

@@ -193,7 +193,7 @@ function Portal({ username, onLogout }: { username: string; onLogout: () => void
       {selected && (
         <AccountSheet
           key={selected.id}
-          account={selected}
+          account={accounts?.find((a) => a.id === selected.id) ?? selected}
           onClose={() => setSelected(null)}
           onChanged={() => void load()}
           onDeleted={() => {
