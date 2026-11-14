@@ -365,54 +365,58 @@ function RoundCard({
       {/* Phase 2 + 3: Treffer / daneben */}
       {(phase === "playing" || (phase === "done" && !editDone)) && (
         <>
-          <ul className="flex flex-col gap-2 mt-3">
+          <ul className="flex flex-col mt-2">
             {bidders.map((p) => {
               const e = entry(p.id)!;
               const miss = e.hit === false;
               const hit = e.hit === true;
+              const isDealer = p.id === dealer?.id;
               const pts = phase === "done" ? entryPoints(e, config) : null;
               const mine = p.user_id != null && p.user_id === me;
               return (
-                <li key={p.id}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={miss}
-                    onClick={() => !readOnly && toggleMiss(p)}
-                    onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && !readOnly && toggleMiss(p)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 border-2 select-none cursor-pointer transition-colors"
-                    style={{
-                      borderColor: miss ? "var(--color-accent)" : hit ? "var(--color-good)" : "var(--color-border)",
-                      background: miss ? "var(--color-accent-soft)" : hit ? "var(--color-good-soft)" : "var(--color-surface)",
-                    }}
-                  >
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center font-display font-extrabold text-xl tabular shrink-0"
-                      style={{
-                        background: miss ? "var(--color-accent)" : hit ? "var(--color-good)" : "var(--color-surface-soft)",
-                        color: miss || hit ? "white" : "var(--color-ink)",
-                      }}
-                    >
-                      {e.bid}
-                    </div>
+                <li
+                  key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={miss}
+                  onClick={() => !readOnly && toggleMiss(p)}
+                  onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && !readOnly && toggleMiss(p)}
+                  className="py-2 border-b last:border-b-0 select-none cursor-pointer -mx-2 px-2 rounded-lg transition-colors"
+                  style={{ borderColor: "var(--color-border)", background: miss ? "var(--color-accent-soft)" : undefined }}
+                >
+                  <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate">
+                      <div className="font-semibold truncate" style={{ color: miss ? "var(--color-accent)" : undefined }}>
                         {p.name}
                         {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
                       </div>
-                      <div className="text-xs" style={{ color: miss ? "var(--color-accent)" : hit ? "var(--color-good)" : "var(--color-text-muted)" }}>
-                        {miss ? "✗ daneben" : hit ? "✓ getroffen" : `${e.bid} angesagt`}
-                        {p.id === dealer?.id && " · Geber"}
+                      <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
+                        {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
+                        {miss && <span style={{ color: "var(--color-accent)" }}>✗ daneben</span>}
+                        {hit && <span style={{ color: "var(--color-good)" }}>✓ getroffen</span>}
                       </div>
                     </div>
-                    {pts != null && (
-                      <span className="font-display font-extrabold text-lg tabular" style={{ color: pts < 0 ? "var(--color-accent)" : "var(--color-ink)" }}>
-                        {pts > 0 ? `+${pts}` : pts}
-                      </span>
-                    )}
+                    {/* gleiche Position wie bei der Ansage: [−] [Zahl] [+] → [Status] [Zahl] [Punkte] */}
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-10 h-10 flex items-center justify-center text-lg font-bold" style={{ color: miss ? "var(--color-accent)" : "var(--color-good)" }}>
+                        {miss ? "✗" : hit ? "✓" : ""}
+                      </div>
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg tabular"
+                        style={{
+                          background: miss ? "var(--color-accent)" : "var(--color-surface-soft)",
+                          color: miss ? "white" : "var(--color-ink)",
+                        }}
+                      >
+                        {e.bid}
+                      </div>
+                      <div className="w-10 h-10 flex items-center justify-center font-display font-bold tabular" style={{ color: pts != null && pts < 0 ? "var(--color-accent)" : "var(--color-ink)" }}>
+                        {pts != null ? pts : ""}
+                      </div>
+                    </div>
                   </div>
                   {miss && askTricks && (
-                    <div className="flex items-center justify-end gap-2 mt-1.5 pr-1" onClick={(ev) => ev.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2 mt-1.5" onClick={(ev) => ev.stopPropagation()}>
                       <span className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>
                         Wie viele Stiche?
                       </span>
