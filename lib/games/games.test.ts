@@ -36,8 +36,10 @@ test("card plan", () => {
   assert.deepEqual(cardPlan({ maxCards: 3, sequence: "up", peakTwice: true }), [1, 2, 3, 3]);
   assert.deepEqual(cardPlan({ maxCards: 1, sequence: "up-down" }), [1]);
   const cfg = { ...defaultFtnConfig(4), maxCards: 3 };
+  assert.equal(cfg.peakTwice, true); // Standard: höchste Runde zweimal
   assert.equal(cardsForRound(cfg, 3), 3);
-  assert.equal(cardsForRound(cfg, 5), 1);
+  assert.equal(cardsForRound(cfg, 4), 3);
+  assert.equal(cardsForRound(cfg, 6), 1);
   assert.equal(cardsForRound(cfg, 99), 1);
 });
 

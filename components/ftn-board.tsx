@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { createRound, deleteRound, finishRound, reopenBids, setGameStatus, updateRound } from "@/lib/actions";
 import type { Entry, FtnConfig, Game, Player, Round } from "@/lib/games";
 import {
-  biddingOrder,
   DEALER_MODES,
   cardPlan,
   entryPoints,
@@ -228,7 +227,8 @@ function RoundCard({
   const [editDone, setEditDone] = useState(false);
   const cards = round.cards ?? 1;
   const phase = round.phase;
-  const order = biddingOrder(players, round.dealer_player_id);
+  // Reihenfolge im Block bleibt immer die Sitzordnung – nur das Geber-Zeichen wandert
+  const order = [...players].sort((a, b) => a.seat - b.seat);
   const dealer = players.find((p) => p.id === round.dealer_player_id) ?? null;
   const entry = (pid: string) => entries.find((e) => e.round_id === round.id && e.player_id === pid);
   const askTricks = needsTricks(config.scoring);

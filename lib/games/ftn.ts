@@ -46,7 +46,7 @@ export function normalizeFtnConfig(c: Partial<FtnConfig> & { decks?: number }): 
 }
 
 export function defaultFtnConfig(playerCount: number): FtnConfig {
-  return normalizeFtnConfig({ maxCards: maxCardsFor(playerCount, DEFAULT_DECK_SIZE) });
+  return normalizeFtnConfig({ maxCards: maxCardsFor(playerCount, DEFAULT_DECK_SIZE), peakTwice: true });
 }
 
 /** Größtmögliche Kartenzahl pro Spieler bei `deckSize` Karten insgesamt. */
