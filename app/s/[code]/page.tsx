@@ -197,11 +197,6 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
           <span className="chip" style={{ background: "var(--color-surface-soft)", color: "var(--color-ink)" }}>
             {GAMES[session.game]?.emoji} {GAMES[session.game]?.label}
           </span>
-          {!finished && (
-            <button className="text-sm font-semibold underline" style={{ color: "var(--color-ink-soft)" }} onClick={() => setShare(true)}>
-              Mitspieler einladen
-            </button>
-          )}
         </div>
 
         {viewer && (

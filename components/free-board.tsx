@@ -52,7 +52,7 @@ export function FreeBoard({
       <Leaderboard players={players} totals={totals} lowWins={config.lowWins} me={me} finished={finished} />
 
       {config.target != null && (
-        <p className="text-sm -mt-3 mb-4" style={{ color: reached ? "var(--color-accent)" : "var(--color-text-muted)" }}>
+        <p className="text-sm mb-4" style={{ color: reached ? "var(--color-accent)" : "var(--color-text-muted)" }}>
           {reached ? `🎯 Ziel von ${config.target} Punkten erreicht!` : `Ziel: ${config.target} Punkte`}
         </p>
       )}
