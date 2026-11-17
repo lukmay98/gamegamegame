@@ -238,7 +238,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
               style={showEvening ? { background: "var(--color-accent)", color: "white" } : { background: "var(--color-accent-soft)", color: "var(--color-ink)" }}
               onClick={() => setTab("evening")}
             >
-              Σ Spieltag
+              Endstand
             </button>
           </div>
         )}
@@ -324,7 +324,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setNewGame(true); }}>＋ Neues Spiel</button>
           )}
           {games.length > 0 && (
-            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Σ Gesamtstand Spieltag</button>
+            <button className="btn btn-ghost justify-start" onClick={() => { setMenu(false); setTab("evening"); }}>Endstand</button>
           )}
           {viewer ? null : finished ? (
             <button className="btn btn-ghost justify-start" onClick={() => void setSessionStatus(session.id, "active").then(refresh)}>↩︎ Spieltag wieder öffnen</button>
