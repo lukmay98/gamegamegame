@@ -164,7 +164,7 @@ function RateSheet({ initial, onClose, onPick }: { initial: number | null; onClo
             const n = Math.round(parseFloat(v.replace(",", ".")) * 100);
             if (Number.isFinite(n) && n > 0) setCents(n);
           }}
-          style={{ borderColor: custom ? "var(--color-ink)" : undefined }}
+          style={{ boxShadow: custom ? "0 0 0 2px var(--color-ink)" : undefined }}
         />
       </div>
 

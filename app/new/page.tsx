@@ -142,13 +142,15 @@ function NewSessionForm({ template }: { template: Template | null }) {
               type="button"
               onClick={() => setGame(id)}
               className="card text-left px-4 py-3 flex gap-3 items-start"
-              style={{ borderColor: game === id ? "var(--color-ink)" : undefined, borderWidth: game === id ? 2 : 1 }}
+              style={{ boxShadow: game === id ? "inset 0 0 0 2px var(--color-ink)" : undefined }}
+              aria-pressed={game === id}
             >
               <span className="text-2xl" aria-hidden>{GAMES[id].emoji}</span>
               <span>
                 <span className="block font-semibold">{GAMES[id].label}</span>
                 <span className="block text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>{GAMES[id].description}</span>
               </span>
+              {game === id && <span className="ml-auto self-center text-lg font-semibold" aria-hidden>✓</span>}
             </button>
           ))}
         </div>
