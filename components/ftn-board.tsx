@@ -398,14 +398,10 @@ function RoundCard({
             {order.map((p) => {
               const e = entry(p.id);
               const isDealer = p.id === dealer?.id;
+              // nur +/− sind gesperrt, bis der Vorherige etwas eingetragen hat
               const wait = !readOnly && waiting(p);
-              const now = !readOnly && turn?.id === p.id;
               return (
-                <li
-                  key={p.id}
-                  className="flex items-center gap-3 py-2 border-b last:border-b-0 -mx-2 px-2 rounded-lg transition-opacity"
-                  style={{ borderColor: "var(--color-border)", opacity: wait ? 0.35 : 1, background: now ? "var(--color-surface-soft)" : undefined }}
-                >
+                <li key={p.id} className="flex items-center gap-3 py-2 border-b last:border-b-0" style={{ borderColor: "var(--color-border)" }}>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">
                       {p.name}
@@ -413,7 +409,6 @@ function RoundCard({
                     </div>
                     <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
                       {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
-                      {now && <span className="font-semibold" style={{ color: "var(--color-ink)" }}>ist dran</span>}
                       {isDealer && forbidden != null && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
                     </div>
                   </div>
