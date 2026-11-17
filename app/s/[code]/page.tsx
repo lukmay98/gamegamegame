@@ -59,7 +59,7 @@ export default function SessionPage() {
   if (error) {
     return (
       <>
-        <TopBar title={code} back="/" />
+        <TopBar title="Spieltag" back="/" />
         <Page><ErrorBox>{error}</ErrorBox></Page>
       </>
     );
@@ -67,7 +67,7 @@ export default function SessionPage() {
   if (preview === undefined || (preview && !sessionId)) {
     return (
       <>
-        <TopBar title={code} back="/" />
+        <TopBar title="Spieltag" back="/" />
         <Spinner />
       </>
     );
@@ -75,7 +75,7 @@ export default function SessionPage() {
   if (preview === null) {
     return (
       <>
-        <TopBar title={code} back="/" />
+        <TopBar title="Spieltag" back="/" />
         <Page>
           <div className="text-center py-10">
             <div className="text-4xl mb-3">🤷</div>
