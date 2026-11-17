@@ -173,7 +173,7 @@ export function FtnBoard({
         <div className="mb-5">
           {planDone ? (
             <button className="btn btn-accent w-full !py-3.5 text-base" onClick={() => void finish()}>
-              🏁 Spiel beenden
+              Spiel beenden
             </button>
           ) : (
             <button className="btn btn-accent w-full !py-3.5 text-base" disabled={busy} onClick={nextRound}>
@@ -218,21 +218,17 @@ export function FtnBoard({
       )}
 
       {!viewer && !finished && selected && (
-        <div className="flex flex-col gap-2 mt-4">
-          <div className="grid grid-cols-2 gap-2">
-            <button className="btn btn-ghost text-sm" onClick={() => setDealerOpen(true)}>
-              Geber{dealerName ? `: ${dealerName}` : ""} ändern
+        <div className="card mt-6 overflow-hidden divide-y" style={{ borderColor: "var(--color-border)" }}>
+          <button className="w-full text-left px-4 py-3 active:bg-black/5" style={{ borderColor: "var(--color-border)" }} onClick={() => setDealerOpen(true)}>
+            Geber{dealerName ? `: ${dealerName}` : ""} ändern
+          </button>
+          {selected.id === last?.id && (
+            <button className="w-full text-left px-4 py-3 active:bg-black/5" style={{ borderColor: "var(--color-border)", color: "var(--color-accent)" }} onClick={() => void removeLast()}>
+              Runde {last.round_number} löschen
             </button>
-            {selected.id === last?.id ? (
-              <button className="btn btn-ghost text-sm" onClick={() => void removeLast()}>
-                Runde {last.round_number} löschen
-              </button>
-            ) : (
-              <span />
-            )}
-          </div>
+          )}
           {!planDone && (
-            <button className="btn btn-ghost w-full text-sm" onClick={() => confirm("Spiel jetzt beenden?") && void finish()}>
+            <button className="w-full text-left px-4 py-3 active:bg-black/5" style={{ borderColor: "var(--color-border)", color: "var(--color-accent)" }} onClick={() => confirm("Spiel jetzt beenden?") && void finish()}>
               Spiel vorzeitig beenden
             </button>
           )}
@@ -372,19 +368,19 @@ function RoundCard({
       {/* Kopf */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display font-bold text-lg leading-tight">
+          <h2 className="font-display font-bold text-[22px] leading-tight">
             Runde {round.round_number}
             <span className="font-normal text-sm ml-2" style={{ color: "var(--color-text-muted)" }}>
               {cards} Karte{cards === 1 ? "" : "n"}
             </span>
           </h2>
-          <p className="text-sm font-semibold mt-0.5" style={{ color: phase === "done" ? "var(--color-good)" : "var(--color-ink-soft)" }}>
+          <p className="text-sm mt-0.5" style={{ color: phase === "done" ? "var(--color-good)" : "var(--color-text-muted)" }}>
             {statusText}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
           {onBackToCurrent && (
-            <button className="text-xs underline" style={{ color: "var(--color-ink-soft)" }} onClick={onBackToCurrent}>
+            <button className="text-sm" style={{ color: "var(--color-text-muted)" }} onClick={onBackToCurrent}>
               {backLabel}
             </button>
           )}
@@ -408,14 +404,14 @@ function RoundCard({
                       {p.id === writerId && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(Schreiber)</span>}
                     </div>
                     <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
-                      {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
+                      {isDealer && <span className="chip !py-0 !px-1.5 !text-[11px]" style={{ background: "rgb(120 120 128 / 0.12)", color: "var(--color-ink)" }}>Geber</span>}
                       {isDealer && forbidden != null && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
                     </div>
                   </div>
                   {readOnly ? (
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg tabular"
-                      style={{ background: "var(--color-surface-soft)", color: e?.bid == null ? "var(--color-text-muted)" : "var(--color-ink)" }}
+                      className="w-10 h-10 flex items-center justify-center font-display font-semibold text-xl tabular"
+                      style={{ color: e?.bid == null ? "var(--color-text-muted)" : "var(--color-ink)" }}
                     >
                       {e?.bid ?? "–"}
                     </div>
@@ -445,7 +441,7 @@ function RoundCard({
           )}
           {phase === "bidding" && !readOnly && allBids && (
             <button className="btn btn-accent w-full mt-3 !py-3" disabled={dealerViolates} onClick={confirmBids}>
-              ✓ Ansagen bestätigen
+              Ansagen bestätigen
             </button>
           )}
           {phase === "done" && editDone && (
@@ -491,7 +487,7 @@ function RoundCard({
                         {p.id === writerId && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(Schreiber)</span>}
                       </div>
                       <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
-                        {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
+                        {isDealer && <span className="chip !py-0 !px-1.5 !text-[11px]" style={{ background: "rgb(120 120 128 / 0.12)", color: "var(--color-ink)" }}>Geber</span>}
                         {miss && <span style={{ color: "var(--color-accent)" }}>✗ daneben</span>}
                         {hit && <span style={{ color: "var(--color-good)" }}>✓ getroffen</span>}
                       </div>
@@ -502,15 +498,12 @@ function RoundCard({
                         {miss ? "✗" : hit ? "✓" : ""}
                       </div>
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg tabular"
-                        style={{
-                          background: miss ? "var(--color-accent)" : "var(--color-surface-soft)",
-                          color: miss ? "white" : "var(--color-ink)",
-                        }}
+                        className="w-10 h-10 flex items-center justify-center font-display font-semibold text-xl tabular"
+                        style={{ color: miss ? "var(--color-accent)" : "var(--color-ink)" }}
                       >
                         {e.bid}
                       </div>
-                      <div className="w-10 h-10 flex items-center justify-center font-display font-bold tabular" style={{ color: pts != null && pts < 0 ? "var(--color-accent)" : "var(--color-ink)" }}>
+                      <div className="w-10 h-10 flex items-center justify-center font-display font-semibold tabular" style={{ color: pts != null && pts < 0 ? "var(--color-accent)" : "var(--color-ink)" }}>
                         {pts != null ? pts : ""}
                       </div>
                     </div>
@@ -570,7 +563,7 @@ function RoundCard({
               <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                 Antippen zum Korrigieren{isLast ? "" : " (ältere Runde)"}.
               </p>
-              <button className="text-xs font-semibold underline" style={{ color: "var(--color-ink-soft)" }} onClick={() => setEditDone(true)}>
+              <button className="text-sm font-semibold" style={{ color: "var(--color-ink)" }} onClick={() => setEditDone(true)}>
                 Ansagen ändern
               </button>
             </div>

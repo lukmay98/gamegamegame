@@ -53,7 +53,7 @@ export function AccountHome({ account }: { account: Account }) {
       <TopBar
         title="GameGameGame"
         right={
-          <span className="chip font-display tracking-wider !text-[12px] !py-1" style={{ background: "rgb(255 255 255 / .14)", color: "white" }}>
+          <span className="chip font-display tracking-wider !text-[12px] !py-1" style={{ background: "var(--color-surface-soft)", color: "var(--color-ink)" }}>
             🔑 {account.code}
           </span>
         }

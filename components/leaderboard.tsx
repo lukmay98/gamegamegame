@@ -26,9 +26,9 @@ export function Leaderboard({
   if (!finished || winners.length === 0) return null;
   return (
     <section className="mb-4">
-      <div className="rounded-2xl px-4 py-3 text-center" style={{ background: "var(--color-ink)", color: "white" }}>
-        <div className="text-xs uppercase tracking-wider opacity-70">{winners.length > 1 ? "Gleichstand" : "Gewonnen"}</div>
-        <div className="font-display font-extrabold text-2xl">🏆 {winners.map((w) => w.player.name).join(" & ")}</div>
+      <div className="card px-4 py-4 text-center">
+        <div className="text-[13px] uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>{winners.length > 1 ? "Gleichstand" : "Gewonnen"}</div>
+        <div className="font-display font-bold text-2xl mt-0.5">🏆 {winners.map((w) => w.player.name).join(" & ")}</div>
       </div>
     </section>
   );

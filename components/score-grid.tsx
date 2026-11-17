@@ -55,11 +55,11 @@ export function ScoreGrid({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <h2 className="font-display font-bold text-lg">
+        <h2 className="text-[13px] uppercase tracking-wide pl-4" style={{ color: "var(--color-text-muted)" }}>
           {title}
-          {subtitle && <span className="text-sm font-normal ml-1.5" style={{ color: "var(--color-text-muted)" }}>· {subtitle}</span>}
+          {subtitle && <span className="ml-1">· {subtitle}</span>}
         </h2>
-        <span className="flex items-center gap-1 text-xs font-semibold shrink-0" style={{ color: "var(--color-ink-soft)" }}>
+        <span className="flex items-center gap-1 text-[13px] shrink-0 pr-1" style={{ color: "var(--color-text-muted)" }}>
           {open ? "Einklappen" : "Ausklappen"}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform 150ms" }}>
             <path d="M6 9l6 6 6-6" />
@@ -72,8 +72,8 @@ export function ScoreGrid({
           <div ref={scroller} className="card overflow-x-auto">
             <table className="text-sm tabular border-collapse min-w-full">
               <thead>
-                <tr style={{ background: "var(--color-surface-soft)" }}>
-                  <th className={`${stickyLeft} px-3 py-2 text-left font-semibold`} style={{ background: "var(--color-surface-soft)" }}>
+                <tr style={{ color: "var(--color-text-muted)" }}>
+                  <th className={`${stickyLeft} px-4 py-2 text-left font-normal text-xs`} style={{ background: "var(--color-surface)" }}>
                     Spieler
                   </th>
                   {rounds.map((r) => {
@@ -81,8 +81,8 @@ export function ScoreGrid({
                     return (
                       <th
                         key={r.id}
-                        className={`px-2 py-1.5 text-center font-semibold min-w-11 ${onSelect ? "cursor-pointer" : ""}`}
-                        style={{ background: sel ? "var(--color-accent-soft)" : undefined }}
+                        className={`px-2 py-1.5 text-center font-normal text-xs min-w-11 ${onSelect ? "cursor-pointer" : ""}`}
+                        style={{ background: sel ? "var(--color-bg)" : undefined, color: sel ? "var(--color-ink)" : undefined }}
                         onClick={() => onSelect?.(r.id)}
                       >
                         <span className="block leading-tight">{r.round_number}</span>
@@ -90,7 +90,7 @@ export function ScoreGrid({
                       </th>
                     );
                   })}
-                  <th className={`${stickyRight} px-3 py-2 text-center font-bold`} style={{ background: "var(--color-surface-soft)", boxShadow: "-1px 0 0 var(--color-border)" }}>
+                  <th className={`${stickyRight} px-3 py-2 text-center font-semibold text-xs`} style={{ background: "var(--color-surface)", color: "var(--color-ink)", boxShadow: "-0.5px 0 0 var(--color-border)" }}>
                     Σ
                   </th>
                 </tr>
@@ -98,21 +98,21 @@ export function ScoreGrid({
               <tbody>
                 {players.map((p) => (
                   <tr key={p.id} className="border-t" style={{ borderColor: "var(--color-border)" }}>
-                    <td className={`${stickyLeft} px-3 py-1.5 font-semibold whitespace-nowrap max-w-28 truncate`} style={{ background: "var(--color-surface)", color: p.id === highlightId ? "var(--color-accent)" : undefined }}>
+                    <td className={`${stickyLeft} px-4 py-2 font-medium whitespace-nowrap max-w-28 truncate`} style={{ background: "var(--color-surface)", color: p.id === highlightId ? "var(--color-accent)" : undefined }}>
                       {p.name}
                     </td>
                     {rounds.map((r) => (
                       <td
                         key={r.id}
                         className={`px-2 py-1.5 text-center ${onSelect ? "cursor-pointer" : ""}`}
-                        style={{ background: r.id === selectedId ? "var(--color-accent-soft)" : undefined }}
+                        style={{ background: r.id === selectedId ? "var(--color-bg)" : undefined }}
                         onClick={() => onSelect?.(r.id)}
                       >
                         {cell(r, p)}
                       </td>
                     ))}
-                    <td className={`${stickyRight} px-3 py-1.5 text-center`} style={{ background: "var(--color-surface)", boxShadow: "-1px 0 0 var(--color-border)" }}>
-                      <span className="block font-display font-extrabold text-base leading-tight" style={{ color: (totals[p.id] ?? 0) < 0 ? "var(--color-accent)" : "var(--color-ink)" }}>
+                    <td className={`${stickyRight} px-3 py-2 text-center`} style={{ background: "var(--color-surface)", boxShadow: "-0.5px 0 0 var(--color-border)" }}>
+                      <span className="block font-display font-semibold text-base leading-tight" style={{ color: (totals[p.id] ?? 0) < 0 ? "var(--color-accent)" : "var(--color-ink)" }}>
                         {totals[p.id] ?? 0}
                       </span>
                       {totalSub && <span className="block text-[10px] leading-tight whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>{totalSub(p)}</span>}
@@ -122,7 +122,7 @@ export function ScoreGrid({
               </tbody>
             </table>
           </div>
-          {hint && <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>{hint}</p>}
+          {hint && <p className="text-xs mt-2 px-4" style={{ color: "var(--color-text-muted)" }}>{hint}</p>}
         </>
       )}
     </section>

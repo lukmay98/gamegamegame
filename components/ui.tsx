@@ -6,11 +6,11 @@ import type { ReactNode } from "react";
 export function TopBar({ title, back, right }: { title: ReactNode; back?: string; right?: ReactNode }) {
   return (
     <header
-      className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3"
-      style={{ background: "var(--color-ink)", color: "white" }}
+      className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3 backdrop-blur-xl"
+      style={{ background: "rgb(242 242 247 / 0.85)", color: "var(--color-ink)", borderBottom: "0.5px solid var(--color-border)" }}
     >
       {back ? (
-        <Link href={back} aria-label="Zurück" className="-ml-1 p-1 rounded-lg hover:bg-white/10">
+        <Link href={back} aria-label="Zurück" className="-ml-1 p-1 rounded-lg hover:bg-black/5">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -18,7 +18,7 @@ export function TopBar({ title, back, right }: { title: ReactNode; back?: string
       ) : (
         <Logo />
       )}
-      <div className="flex-1 min-w-0 font-display font-bold text-[15px] tracking-tight truncate">{title}</div>
+      <div className="flex-1 min-w-0 font-display font-semibold text-[17px] truncate">{title}</div>
       {right}
     </header>
   );
@@ -27,9 +27,9 @@ export function TopBar({ title, back, right }: { title: ReactNode; back?: string
 export function Logo() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="4" width="11" height="15" rx="2" transform="rotate(-10 8 11)" fill="#c63d32" />
-      <rect x="9" y="5" width="11" height="15" rx="2" transform="rotate(8 14 12)" fill="white" />
-      <circle cx="14.6" cy="12.6" r="1.6" fill="#1c2540" />
+      <rect x="3" y="4" width="11" height="15" rx="2" transform="rotate(-10 8 11)" fill="#e5372c" />
+      <rect x="9" y="5" width="11" height="15" rx="2" transform="rotate(8 14 12)" fill="#1c1c1e" />
+      <circle cx="14.6" cy="12.6" r="1.6" fill="white" />
     </svg>
   );
 }
@@ -65,7 +65,7 @@ export function Stepper({
     <div className="flex items-center gap-1.5">
       <button
         type="button"
-        className="btn btn-soft !p-0 w-10 h-10 text-lg"
+        className="btn btn-soft !p-0 !rounded-full w-9 h-9 text-lg"
         onClick={() => step(-1)}
         disabled={disabled || current == null || current <= min}
         aria-label="weniger"
@@ -73,18 +73,16 @@ export function Stepper({
         −
       </button>
       <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg tabular"
+        className="w-9 h-9 flex items-center justify-center font-display font-semibold text-xl tabular"
         style={{
-          background: isForbidden ? "var(--color-accent-soft)" : current == null ? "transparent" : "var(--color-surface-soft)",
-          border: current == null ? "1.5px dashed var(--color-border)" : "none",
-          color: isForbidden ? "var(--color-accent)" : "var(--color-ink)",
+          color: isForbidden ? "var(--color-accent)" : current == null ? "var(--color-text-muted)" : "var(--color-ink)",
         }}
       >
         {current ?? "–"}
       </div>
       <button
         type="button"
-        className="btn btn-soft !p-0 w-10 h-10 text-lg"
+        className="btn btn-soft !p-0 !rounded-full w-9 h-9 text-lg"
         onClick={() => step(1)}
         disabled={disabled || (current != null && current >= max)}
         aria-label="mehr"
@@ -120,16 +118,16 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className="mt-0.5 shrink-0 w-11 h-6 rounded-full relative transition-colors"
-        style={{ background: checked ? "var(--color-ink)" : "var(--color-border)" }}
+        className="mt-0.5 shrink-0 w-12 h-7 rounded-full relative transition-colors"
+        style={{ background: checked ? "var(--color-good)" : "var(--color-border)" }}
       >
         <span
-          className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+          className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all"
           style={{ left: checked ? "1.375rem" : "0.125rem" }}
         />
       </button>
       <span>
-        <span className="block text-sm font-semibold">{label}</span>
+        <span className="block text-[15px]">{label}</span>
         {hint && <span className="block text-xs" style={{ color: "var(--color-text-muted)" }}>{hint}</span>}
       </span>
     </label>

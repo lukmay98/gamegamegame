@@ -180,13 +180,13 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             <span
               className="inline-block w-2 h-2 rounded-full shrink-0"
               title={connected ? "Live verbunden" : "Verbinde …"}
-              style={{ background: connected ? "#5ad18a" : "#e0b04a" }}
+              style={{ background: connected ? "#34c759" : "#ff9f0a" }}
             />
           </span>
         }
         right={
           <div className="flex items-center gap-1.5">
-            <button className="p-1.5 rounded-lg hover:bg-white/10" aria-label="Menü" onClick={() => setMenu(true)}>
+            <button className="p-1.5 rounded-lg hover:bg-black/5" aria-label="Menü" onClick={() => setMenu(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
             </button>
           </div>
@@ -194,8 +194,8 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
       />
       <Page>
         <div className="flex items-center justify-between mb-4">
-          <span className="chip" style={{ background: "var(--color-surface-soft)", color: "var(--color-ink)" }}>
-            {GAMES[session.game]?.emoji} {GAMES[session.game]?.label}
+          <span className="text-[13px] uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>
+            {GAMES[session.game]?.label}
           </span>
         </div>
 
@@ -209,7 +209,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         {(saveError || error) && <div className="mb-3"><ErrorBox>{saveError ?? error}</ErrorBox></div>}
 
         {games.length > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 mb-4" role="tablist" aria-label="Spiele">
+          <div className="flex gap-0.5 overflow-x-auto rounded-[10px] p-0.5 mb-5" style={{ background: "var(--color-surface-soft)" }} role="tablist" aria-label="Spiele">
             {games.map((g) => {
               const sel = !showEvening && g.id === game?.id;
               return (
@@ -217,20 +217,20 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
                   key={g.id}
                   role="tab"
                   aria-selected={sel}
-                  className="chip shrink-0 !py-1.5"
-                  style={sel ? { background: "var(--color-ink)", color: "white" } : { background: "var(--color-surface-soft)", color: "var(--color-ink)" }}
+                  className="flex-1 shrink-0 min-w-16 rounded-lg px-3 py-1.5 text-[13px] font-semibold"
+                  style={sel ? { background: "var(--color-surface)", color: "var(--color-ink)", boxShadow: "0 1px 3px rgb(0 0 0 / .12)" } : { color: "var(--color-ink)" }}
                   onClick={() => setTab(g.id)}
                 >
                   Spiel {g.number}
-                  {g.status === "finished" ? " ✓" : " · läuft"}
+                  {g.status === "finished" ? " ✓" : ""}
                 </button>
               );
             })}
             <button
               role="tab"
               aria-selected={showEvening}
-              className="chip shrink-0 !py-1.5"
-              style={showEvening ? { background: "var(--color-accent)", color: "white" } : { background: "var(--color-accent-soft)", color: "var(--color-ink)" }}
+              className="flex-1 shrink-0 min-w-16 rounded-lg px-3 py-1.5 text-[13px] font-semibold"
+              style={showEvening ? { background: "var(--color-surface)", color: "var(--color-ink)", boxShadow: "0 1px 3px rgb(0 0 0 / .12)" } : { color: "var(--color-ink)" }}
               onClick={() => setTab("evening")}
             >
               Endstand
