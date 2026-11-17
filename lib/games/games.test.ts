@@ -178,6 +178,16 @@ test("round logic check", () => {
   assert.equal(roundProblem(2, [r(1, true), r(1, true)], false), null);
   // Richtige sagen mehr an als Karten
   assert.ok(roundProblem(2, [r(2, true), r(1, true), r(0, false)], false));
+  // Screenshot 1: 1 Karte, Ansagen 0/1/1, nur Lukas (1) richtig → Null-Ansager bräuchte einen Stich
+  assert.ok(roundProblem(1, [r(0, false), r(1, false), r(1, true)], false));
+  // Screenshot 2: nur S2 (0) richtig → der eine Stich müsste an einen 1-Ansager gehen
+  assert.ok(roundProblem(1, [r(0, true), r(1, false), r(1, false)], false));
+  // gültig: 1 Karte, S2 (0) richtig, S3 (1) falsch, Lukas (1) richtig
+  assert.equal(roundProblem(1, [r(0, true), r(1, false), r(1, true)], false), null);
+  // Gegenbeispiel: 3 Karten, A 1 richtig, B 0 falsch (2 Stiche), C 1 falsch (0) → gültig
+  assert.equal(roundProblem(3, [r(1, true), r(0, false), r(1, false)], false), null);
+  // Ein Falscher bekäme genau seine Ansage
+  assert.ok(roundProblem(3, [r(1, true), r(2, false)], false));
   // Stiche müssen aufgehen
   assert.ok(roundProblem(3, [r(1, true), r(0, false, 1), r(2, false, 0)], true));
   assert.equal(roundProblem(3, [r(1, true), r(0, false, 2), r(2, false, 0)], true), null);

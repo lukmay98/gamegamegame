@@ -180,8 +180,28 @@ export function ftnTotals(config: FtnConfig, players: Player[], rounds: Round[],
 }
 
 /**
+ * Können sich `rest` Stiche so auf die Falsch-Liegenden verteilen, dass jeder
+ * zwischen 0 und `cards` Stiche hat, aber nie genau seine Ansage?
+ */
+export function canSplitAmongMisses(rest: number, missBids: number[], cards: number): boolean {
+  if (rest < 0) return false;
+  let reach = new Set<number>([0]);
+  for (const bid of missBids) {
+    const next = new Set<number>();
+    for (const sum of reach) {
+      for (let t = 0; t <= cards && sum + t <= rest; t++) if (t !== bid) next.add(sum + t);
+    }
+    reach = next;
+  }
+  return reach.has(rest);
+}
+
+/**
  * Prüft, ob das Ergebnis einer Runde möglich ist. `hit: null` zählt als getroffen
  * (beim Abschließen werden nicht Angetippte als getroffen gewertet).
+ *
+ * K = Karten, R = K − Summe der Ansagen der Richtigen (= Stiche der Falschen).
+ * Gültig, wenn sich R so auf die Falschen verteilen lässt, dass keiner genau seine Ansage trifft.
  * Gibt eine Fehlermeldung zurück oder null, wenn alles passt.
  */
 export function roundProblem(
@@ -193,39 +213,26 @@ export function roundProblem(
   if (bids.length === 0) return null;
   const hitters = bids.filter((r) => r.hit !== false);
   const misses = bids.filter((r) => r.hit === false);
-  const sumAll = bids.reduce((s, r) => s + (r.bid as number), 0);
   const sumHit = hitters.reduce((s, r) => s + (r.bid as number), 0);
-  if (misses.length === 0 && sumAll !== cards) {
-    return `Es können nicht alle richtig liegen – die Ansagen ergeben ${sumAll} statt ${cards} Stiche. Mindestens einer lag daneben.`;
-  }
-  if (sumHit > cards) {
+  const rest = cards - sumHit;
+  if (rest < 0) {
     return `Die Richtig-Liegenden haben zusammen ${sumHit} Stiche angesagt – es gibt aber nur ${cards}.`;
   }
-  if (askTricks && misses.length > 0 && misses.every((r) => r.tricks != null)) {
-    const total = sumHit + misses.reduce((s, r) => s + (r.tricks as number), 0);
-    if (total !== cards) return `Die Stiche ergeben zusammen ${total} statt ${cards}.`;
-    return null;
+  if (misses.length === 0) {
+    return rest === 0
+      ? null
+      : `Es können nicht alle richtig liegen – die Ansagen ergeben ${sumHit} statt ${cards} Stiche. Mindestens einer lag daneben.`;
   }
-  // Die Falschen müssen sich die übrigen Stiche so teilen können, dass keiner genau seine Ansage trifft
-  const rest = cards - sumHit;
-  if (misses.length > 0 && !splitPossible(rest, misses.map((r) => r.bid as number))) {
-    if (misses.length === 1) {
-      return `Übrig bleiben ${rest} Stich${rest === 1 ? "" : "e"} – genau die Ansage des Falschen. Dann hätte er richtig gelegen.`;
-    }
-    return `Die ${rest} übrigen Stiche lassen sich nicht so auf die Falschen verteilen, dass alle danebenliegen.`;
+  if (askTricks && misses.every((r) => r.tricks != null)) {
+    const total = sumHit + misses.reduce((s, r) => s + (r.tricks as number), 0);
+    return total === cards ? null : `Die Stiche ergeben zusammen ${total} statt ${cards}.`;
+  }
+  if (!canSplitAmongMisses(rest, misses.map((r) => r.bid as number), cards)) {
+    return misses.length === 1
+      ? `So geht die Runde nicht auf: Für den Falsch-Liegenden bleiben genau ${rest} Stich${rest === 1 ? "" : "e"} – das wäre seine Ansage. Bitte prüfen, wer daneben lag.`
+      : `So geht die Runde nicht auf: Die übrigen ${rest} Stich${rest === 1 ? "" : "e"} lassen sich nicht so auf die Falsch-Liegenden verteilen, dass alle danebenliegen. Bitte prüfen, wer daneben lag.`;
   }
   return null;
-}
-
-/** Lässt sich `rest` so auf die Spieler aufteilen, dass niemand genau seine Ansage bekommt? */
-function splitPossible(rest: number, bids: number[]): boolean {
-  let reach = new Set([0]);
-  for (const b of bids) {
-    const next = new Set<number>();
-    for (const sum of reach) for (let t = 0; sum + t <= rest; t++) if (t !== b) next.add(sum + t);
-    reach = next;
-  }
-  return reach.has(rest);
 }
 
 /** Wer ist bei der Ansage dran? Links vom Geber beginnend, Geber zuletzt. null = alle haben angesagt. */
