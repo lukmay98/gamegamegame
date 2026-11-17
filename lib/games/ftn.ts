@@ -201,11 +201,31 @@ export function roundProblem(
   if (sumHit > cards) {
     return `Die Richtig-Liegenden haben zusammen ${sumHit} Stiche angesagt – es gibt aber nur ${cards}.`;
   }
-  if (askTricks && misses.every((r) => r.tricks != null)) {
+  if (askTricks && misses.length > 0 && misses.every((r) => r.tricks != null)) {
     const total = sumHit + misses.reduce((s, r) => s + (r.tricks as number), 0);
     if (total !== cards) return `Die Stiche ergeben zusammen ${total} statt ${cards}.`;
+    return null;
+  }
+  // Die Falschen müssen sich die übrigen Stiche so teilen können, dass keiner genau seine Ansage trifft
+  const rest = cards - sumHit;
+  if (misses.length > 0 && !splitPossible(rest, misses.map((r) => r.bid as number))) {
+    if (misses.length === 1) {
+      return `Übrig bleiben ${rest} Stich${rest === 1 ? "" : "e"} – genau die Ansage des Falschen. Dann hätte er richtig gelegen.`;
+    }
+    return `Die ${rest} übrigen Stiche lassen sich nicht so auf die Falschen verteilen, dass alle danebenliegen.`;
   }
   return null;
+}
+
+/** Lässt sich `rest` so auf die Spieler aufteilen, dass niemand genau seine Ansage bekommt? */
+function splitPossible(rest: number, bids: number[]): boolean {
+  let reach = new Set([0]);
+  for (const b of bids) {
+    const next = new Set<number>();
+    for (const sum of reach) for (let t = 0; sum + t <= rest; t++) if (t !== b) next.add(sum + t);
+    reach = next;
+  }
+  return reach.has(rest);
 }
 
 /** Wer ist bei der Ansage dran? Links vom Geber beginnend, Geber zuletzt. null = alle haben angesagt. */

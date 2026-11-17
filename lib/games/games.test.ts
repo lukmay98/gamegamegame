@@ -181,6 +181,17 @@ test("round logic check", () => {
   // Stiche müssen aufgehen
   assert.ok(roundProblem(3, [r(1, true), r(0, false, 1), r(2, false, 0)], true));
   assert.equal(roundProblem(3, [r(1, true), r(0, false, 2), r(2, false, 0)], true), null);
+  // 1 Karte, alle 0: einer falsch (hat den Stich) → gültig
+  assert.equal(roundProblem(1, [r(0, true), r(0, false), r(0, true)], false), null);
+  // einziger Falscher, Rest = seine Ansage → unmöglich
+  assert.ok(roundProblem(3, [r(1, true), r(1, false), r(1, true)], false));
+  assert.equal(roundProblem(3, [r(1, true), r(2, false), r(1, true)], false), null);
+  // Rest 0, Falscher hat 0 angesagt → unmöglich
+  assert.ok(roundProblem(2, [r(2, true), r(0, false), r(1, false)], false));
+  // zwei Falsche mit je 1, Rest 1 → unmöglich
+  assert.ok(roundProblem(2, [r(1, true), r(1, false), r(1, false)], false));
+  // zwei Falsche 1 und 0, Rest 1 → gültig (0 und 1 tauschen)
+  assert.equal(roundProblem(2, [r(1, true), r(1, false), r(0, false)], false), null);
 });
 
 test("next bidder follows the table", () => {
