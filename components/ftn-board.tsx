@@ -539,16 +539,13 @@ function RoundCard({
 
           {phase === "playing" && !readOnly && (
             <>
-              <p className="text-xs mt-3" style={{ color: "var(--color-text-muted)" }}>
-                Nur antippen, wer <b>falsch</b> lag. Alle anderen zählen beim Abschließen als getroffen.
-              </p>
               {problem && !missingTricks && (
-                <p className="text-xs mt-1 font-semibold" style={{ color: "var(--color-accent)" }}>
+                <p className="text-xs mt-3 font-semibold" style={{ color: "var(--color-accent)" }}>
                   {problem}
                 </p>
               )}
               {missingTricks && (
-                <p className="text-xs mt-1" style={{ color: "var(--color-accent)" }}>
+                <p className="text-xs mt-3" style={{ color: "var(--color-accent)" }}>
                   Bitte bei allen, die daneben lagen, die tatsächlichen Stiche eintragen.
                 </p>
               )}
