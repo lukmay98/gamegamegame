@@ -402,7 +402,7 @@ function RoundCard({
               const wait = !readOnly && waiting(p);
               return (
                 <li key={p.id} className="flex items-center gap-3 py-2 border-b last:border-b-0" style={{ borderColor: "var(--color-border)" }}>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 transition-opacity" style={{ opacity: wait ? 0.45 : 1 }}>
                     <div className="font-semibold truncate">
                       {p.name}
                       {p.id === writerId && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(Schreiber)</span>}
