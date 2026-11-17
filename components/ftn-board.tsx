@@ -103,6 +103,7 @@ export function FtnBoard({
   }
 
   async function finish() {
+    setSelectedId(null);
     await run(() => setGameStatus(game.id, "finished"));
     onFinished?.();
   }
