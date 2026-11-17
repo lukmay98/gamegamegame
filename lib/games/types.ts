@@ -24,6 +24,8 @@ export interface Game {
   status: SessionStatus;
   created_at: string;
   finished_at: string | null;
+  /** wer in diesem Spiel mitschreibt */
+  writer_player_id: string | null;
 }
 
 export interface Player {

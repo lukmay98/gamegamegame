@@ -5,13 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FreeBoard } from "@/components/free-board";
 import { EveningBoard, gameResults } from "@/components/evening-board";
+import { HomeSheet } from "@/components/home-sheet";
+import { useAccount } from "@/lib/account";
 import { NewGameSheet } from "@/components/new-game-sheet";
 import { FtnBoard } from "@/components/ftn-board";
 import { PlayersSheet } from "@/components/players-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { Sheet } from "@/components/sheet";
 import { ErrorBox, Page, Spinner, TopBar } from "@/components/ui";
-import { deleteSession, leaveSession, saveEntry, setSessionStatus } from "@/lib/actions";
+import { createGame, deleteSession, leaveSession, saveEntry, setSessionStatus } from "@/lib/actions";
 import { GAMES, type Entry, type GameId, type Player, type Round } from "@/lib/games";
 import { ensureSignedIn, errorText, supabase } from "@/lib/supabase";
 import { useLiveSession } from "@/lib/use-live-session";
@@ -98,6 +100,10 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
   // null = neueste Partie, "evening" = Abend-Gesamtstand, sonst Game-ID
   const [tab, setTab] = useState<string | null>(null);
   const [newGame, setNewGame] = useState(false);
+  const [homeOpen, setHomeOpen] = useState(false);
+  const { account } = useAccount();
+  // mehrere Geräte mit dem Code angemeldet → beim neuen Spiel nach dem Schreiber fragen
+  const askWriter = (account?.devices ?? 0) > 1;
 
   // Optimistisch lokal setzen, dann speichern; Realtime gleicht danach ab.
   const saveFtn = useCallback(
@@ -180,9 +186,6 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         }
         right={
           <div className="flex items-center gap-1.5">
-            <button className="chip font-display tracking-widest !text-[13px] !py-1" style={{ background: "rgb(255 255 255 / .14)", color: "white" }} onClick={() => setShare(true)}>
-              {session.code}
-            </button>
             <button className="p-1.5 rounded-lg hover:bg-white/10" aria-label="Menü" onClick={() => setMenu(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
             </button>
@@ -256,6 +259,7 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
             patchLocal={patchLocal}
             viewer={viewer}
             previousGames={previousGames}
+            onFinished={() => setHomeOpen(true)}
           />
         ) : (
           <FreeBoard key={game.id} live={gameLive} game={game} onNewGame={() => setNewGame(true)} me={me} refresh={() => void refresh()} viewer={viewer} />
@@ -269,10 +273,35 @@ function SessionView({ sessionId, me }: { sessionId: string; me: string | null }
         game={session.game}
         games={games}
         playerCount={data.players.length}
+        players={data.players}
+        askWriter={askWriter}
         onCreated={(id) => {
           setNewGame(false);
           setTab(id);
           void refresh();
+        }}
+      />
+      <HomeSheet
+        open={homeOpen}
+        players={data.players}
+        askWriter={askWriter}
+        lastWriterId={games.at(-1)?.writer_player_id ?? null}
+        onClose={() => setHomeOpen(false)}
+        onSettle={() => {
+          setHomeOpen(false);
+          setTab("evening");
+        }}
+        onAnother={async (writerId) => {
+          const lastGame = games.at(-1);
+          try {
+            const id = await createGame(session.id, (lastGame?.number ?? 0) + 1, lastGame?.config ?? session.config, writerId);
+            setHomeOpen(false);
+            setTab(id);
+          } catch (e) {
+            setSaveError(errorText(e));
+            setHomeOpen(false);
+          }
+          await refresh();
         }}
       />
       <ShareSheet open={share} onClose={() => setShare(false)} code={session.code} name={session.name} />

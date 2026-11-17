@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { createGame, setGameStatus } from "@/lib/actions";
-import type { FreeConfig, FtnConfig, Game, GameId } from "@/lib/games";
+import type { FreeConfig, FtnConfig, Game, GameId, Player } from "@/lib/games";
 import { defaultFreeConfig } from "@/lib/games/free";
 import { defaultFtnConfig, normalizeFtnConfig } from "@/lib/games/ftn";
 import { errorText } from "@/lib/supabase";
 import { effectiveFtn, FreeSettings, FtnSettings, overrideFrom } from "./game-settings";
 import { Sheet } from "./sheet";
+import { WriterPicker } from "./writer-picker";
 import { ErrorBox } from "./ui";
 
 /** Neue Partie im selben Spieltag – Regeln der letzten Partie sind vorausgewählt. */
@@ -19,7 +20,11 @@ export function NewGameSheet({
   games,
   playerCount,
   onCreated,
+  players,
+  askWriter,
 }: {
+  players: Player[];
+  askWriter: boolean;
   open: boolean;
   onClose: () => void;
   sessionId: string;
@@ -31,7 +36,7 @@ export function NewGameSheet({
   if (!open) return null;
   return (
     <Sheet open onClose={onClose} title="Neues Spiel">
-      <NewGameForm sessionId={sessionId} game={game} games={games} playerCount={playerCount} onCreated={onCreated} />
+      <NewGameForm sessionId={sessionId} game={game} games={games} playerCount={playerCount} onCreated={onCreated} players={players} askWriter={askWriter} />
     </Sheet>
   );
 }
@@ -42,7 +47,11 @@ function NewGameForm({
   games,
   playerCount,
   onCreated,
+  players,
+  askWriter,
 }: {
+  players: Player[];
+  askWriter: boolean;
   sessionId: string;
   game: GameId;
   games: Game[];
@@ -58,6 +67,7 @@ function NewGameForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const number = (games.at(-1)?.number ?? 0) + 1;
+  const [writer, setWriter] = useState<string | null>(last?.writer_player_id ?? null);
 
   async function start() {
     setBusy(true);
@@ -65,7 +75,7 @@ function NewGameForm({
     try {
       const config = game === "ftn" ? effectiveFtn(ftnBase, maxOverride, playerCount) : free;
       for (const g of games) if (g.status === "active") await setGameStatus(g.id, "finished");
-      onCreated(await createGame(sessionId, number, config));
+      onCreated(await createGame(sessionId, number, config, writer));
     } catch (e) {
       setError(errorText(e));
       setBusy(false);
@@ -83,6 +93,7 @@ function NewGameForm({
       ) : (
         <FreeSettings free={free} setFree={(fn) => setFree(fn)} />
       )}
+      {askWriter && <WriterPicker players={players} value={writer} onChange={setWriter} />}
       {error && <ErrorBox>{error}</ErrorBox>}
       <button className="btn btn-accent w-full !py-3.5 text-base" disabled={busy} onClick={() => void start()}>
         {busy ? "Startet …" : `Spiel ${number} starten`}

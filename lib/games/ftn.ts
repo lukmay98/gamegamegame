@@ -178,3 +178,37 @@ export function ftnTotals(config: FtnConfig, players: Player[], rounds: Round[],
   }
   return { perRound, totals, hits, played };
 }
+
+/**
+ * Prüft, ob das Ergebnis einer Runde möglich ist. `hit: null` zählt als getroffen
+ * (beim Abschließen werden nicht Angetippte als getroffen gewertet).
+ * Gibt eine Fehlermeldung zurück oder null, wenn alles passt.
+ */
+export function roundProblem(
+  cards: number,
+  rows: { bid: number | null; hit: boolean | null; tricks: number | null }[],
+  askTricks: boolean,
+): string | null {
+  const bids = rows.filter((r) => r.bid != null);
+  if (bids.length === 0) return null;
+  const hitters = bids.filter((r) => r.hit !== false);
+  const misses = bids.filter((r) => r.hit === false);
+  const sumAll = bids.reduce((s, r) => s + (r.bid as number), 0);
+  const sumHit = hitters.reduce((s, r) => s + (r.bid as number), 0);
+  if (misses.length === 0 && sumAll !== cards) {
+    return `Es können nicht alle richtig liegen – die Ansagen ergeben ${sumAll} statt ${cards} Stiche. Mindestens einer lag daneben.`;
+  }
+  if (sumHit > cards) {
+    return `Die Richtig-Liegenden haben zusammen ${sumHit} Stiche angesagt – es gibt aber nur ${cards}.`;
+  }
+  if (askTricks && misses.every((r) => r.tricks != null)) {
+    const total = sumHit + misses.reduce((s, r) => s + (r.tricks as number), 0);
+    if (total !== cards) return `Die Stiche ergeben zusammen ${total} statt ${cards}.`;
+  }
+  return null;
+}
+
+/** Wer ist bei der Ansage dran? Links vom Geber beginnend, Geber zuletzt. null = alle haben angesagt. */
+export function nextBidder(players: Player[], dealerId: string | null, bidOf: (pid: string) => number | null | undefined): Player | null {
+  return biddingOrder(players, dealerId).find((p) => bidOf(p.id) == null) ?? null;
+}

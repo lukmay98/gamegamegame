@@ -14,6 +14,8 @@ import {
   nextDealer,
   normalizeFtnConfig,
   firstDealer,
+  nextBidder,
+  roundProblem,
 } from "./ftn.ts";
 import { freeTotals, targetReached } from "./free.ts";
 import { rank } from "./ranking.ts";
@@ -165,4 +167,29 @@ test("settlement like the Excel sheet", () => {
   assert.equal(payouts(six, totals, 10)[0].cents, 370);
   // wenig gewinnt: Reihenfolge dreht sich
   assert.equal(payouts(six, totals, 100, true)[0].player.id, "f");
+});
+
+test("round logic check", () => {
+  const r = (bid: number, hit: boolean | null, tricks: number | null = null) => ({ bid, hit, tricks });
+  // Ansagen 1+0+1 = 2 bei 3 Karten: alle richtig unmöglich
+  assert.ok(roundProblem(3, [r(1, null), r(0, null), r(1, true)], false));
+  assert.equal(roundProblem(3, [r(1, null), r(0, false), r(1, true)], false), null);
+  // Ansagen = Kartenzahl (ohne Geber-Regel): alle richtig möglich
+  assert.equal(roundProblem(2, [r(1, true), r(1, true)], false), null);
+  // Richtige sagen mehr an als Karten
+  assert.ok(roundProblem(2, [r(2, true), r(1, true), r(0, false)], false));
+  // Stiche müssen aufgehen
+  assert.ok(roundProblem(3, [r(1, true), r(0, false, 1), r(2, false, 0)], true));
+  assert.equal(roundProblem(3, [r(1, true), r(0, false, 2), r(2, false, 0)], true), null);
+});
+
+test("next bidder follows the table", () => {
+  const bids: Record<string, number | null> = { a: null, b: null, c: null };
+  // Geber b → c, a, b
+  assert.equal(nextBidder(players, "b", (id) => bids[id])?.id, "c");
+  bids.c = 1;
+  assert.equal(nextBidder(players, "b", (id) => bids[id])?.id, "a");
+  bids.a = 0;
+  bids.b = 2;
+  assert.equal(nextBidder(players, "b", (id) => bids[id]), null);
 });

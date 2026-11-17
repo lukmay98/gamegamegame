@@ -798,3 +798,57 @@ begin
 end $$;
 revoke all on function create_session(text, text, jsonb, text[]) from public, anon;
 grant execute on function create_session(text, text, jsonb, text[]) to authenticated;
+-- Schreiber pro Spiel
+alter table games add column if not exists writer_player_id uuid references players(id) on delete set null;
+update games g set writer_player_id = p.id
+from sessions s join players p on p.session_id = s.id and p.user_id = s.created_by
+where g.session_id = s.id and g.writer_player_id is null;
+
+-- Konto: Anzahl angemeldeter Geräte (mehrere → beim neuen Spiel nach Schreiber fragen)
+create or replace function my_account()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('id', a.id, 'code', a.code, 'must_change', a.must_change,
+    'devices', (select count(*) from account_devices d2 where d2.account_id = a.id))
+  from account_devices d join accounts a on a.id = d.account_id
+  where d.user_id = auth.uid();
+$$;
+
+-- Spieltag anlegen: erster Name = Schreiber, sitzt ganz unten, ist Schreiber von Spiel 1
+create or replace function create_session(p_name text, p_game text, p_config jsonb, p_players text[])
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_code text;
+  v_id uuid;
+  v_game uuid;
+  v_writer uuid;
+  v_alphabet text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  v_names text[];
+  v_n int;
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+  v_names := array(select trim(x) from unnest(p_players) with ordinality as t(x, i) where length(trim(x)) > 0 order by i);
+  v_n := coalesce(array_length(v_names, 1), 0);
+  if v_n < 1 then raise exception 'Mindestens ein Spieler nötig'; end if;
+  loop
+    v_code := '';
+    for i in 1..6 loop
+      v_code := v_code || substr(v_alphabet, 1 + floor(random() * length(v_alphabet))::int, 1);
+    end loop;
+    exit when not exists (select 1 from sessions where code = v_code);
+  end loop;
+  insert into sessions (code, name, game, config, created_by, account_id)
+  values (v_code, coalesce(nullif(trim(p_name), ''), 'Spielabend'), p_game, coalesce(p_config, '{}'::jsonb), auth.uid(), my_account_id())
+  returning id into v_id;
+  insert into games (session_id, number, config) values (v_id, 1, coalesce(p_config, '{}'::jsonb)) returning id into v_game;
+  insert into session_members (session_id, user_id, role) values (v_id, auth.uid(), 'editor');
+  for i in 2..v_n loop
+    insert into players (session_id, name, seat) values (v_id, v_names[i], i - 1);
+  end loop;
+  insert into players (session_id, name, seat, user_id) values (v_id, v_names[1], v_n, auth.uid()) returning id into v_writer;
+  update games set writer_player_id = v_writer where id = v_game;
+  return v_code;
+end $$;
+revoke all on function create_session(text, text, jsonb, text[]) from public, anon;
+grant execute on function create_session(text, text, jsonb, text[]) to authenticated;
+revoke all on function my_account() from public, anon;
+grant execute on function my_account() to authenticated;

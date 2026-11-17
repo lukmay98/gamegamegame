@@ -115,9 +115,13 @@ export async function finishRound(roundId: string) {
 }
 
 /** Neue Partie im Spieltag anlegen; die Regeln werden auch als Vorlage für die nächste Partie gemerkt. */
-export async function createGame(sessionId: string, number: number, config: object) {
+export async function createGame(sessionId: string, number: number, config: object, writerId: string | null = null) {
   const sb = await db();
-  const { data, error } = await sb.from("games").insert({ session_id: sessionId, number, config }).select("id").single();
+  const { data, error } = await sb
+    .from("games")
+    .insert({ session_id: sessionId, number, config, writer_player_id: writerId })
+    .select("id")
+    .single();
   if (error && error.code !== "23505") throw error;
   const r2 = await sb.from("sessions").update({ config }).eq("id", sessionId);
   if (r2.error) throw r2.error;

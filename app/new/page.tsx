@@ -112,7 +112,7 @@ function NewSessionForm({ template }: { template: Template | null }) {
       await ensureSignedIn();
       saveLastName(names[0]);
       const { data, error } = await supabase().rpc("create_session", {
-        p_name: name.trim() || `${GAMES[game].short} ${new Date().toLocaleDateString("de-AT")}`,
+        p_name: name.trim() || `${GAMES[game].short} ${new Date().toLocaleDateString("de-AT")} ${new Date().toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" })}`,
         p_game: game,
         p_config: game === "ftn" ? ftn : free,
         p_players: names,

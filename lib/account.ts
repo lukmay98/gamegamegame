@@ -8,6 +8,8 @@ export interface Account {
   id: string;
   code: string;
   must_change: boolean;
+  /** Anzahl Geräte, die mit diesem Code angemeldet sind */
+  devices?: number;
 }
 
 type State = { loading: boolean; account: Account | null };

@@ -7,11 +7,14 @@ import {
   cardPlan,
   entryPoints,
   forbiddenDealerBid,
+  nextBidder,
+  roundProblem,
   ftnTotals,
   needsTricks,
   normalizeFtnConfig,
   firstDealer,
   nextDealer,
+  biddingOrder,
 } from "@/lib/games/ftn";
 import type { LiveSession } from "@/lib/use-live-session";
 import { errorText } from "@/lib/supabase";
@@ -34,7 +37,10 @@ export function FtnBoard({
   patchLocal,
   viewer = false,
   previousGames = [],
+  onFinished,
 }: {
+  /** nach „Spiel beenden“ – fragt „Wird schon heim gegangen?“ */
+  onFinished?: () => void;
   viewer?: boolean;
   /** Punkte je Spieler der vorherigen Spiele dieses Spieltags (für den ersten Geber) */
   previousGames?: Record<string, number>[];
@@ -54,10 +60,10 @@ export function FtnBoard({
   const totals = useMemo(() => ftnTotals(config, sortedPlayers, rounds, entries), [config, sortedPlayers, rounds, entries]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dealerOpen, setDealerOpen] = useState(false);
-  // Schreiber = wer den Spieltag angelegt hat (wird rot hervorgehoben)
+  // Schreiber dieses Spiels (sonst: wer den Spieltag angelegt hat)
   const writerId = useMemo(
-    () => players.find((p) => p.user_id != null && p.user_id === session.created_by)?.id ?? null,
-    [players, session.created_by],
+    () => game.writer_player_id ?? players.find((p) => p.user_id != null && p.user_id === session.created_by)?.id ?? null,
+    [game.writer_player_id, players, session.created_by],
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +102,10 @@ export function FtnBoard({
     await run(() => deleteRound(last.id));
   }
 
-  const finish = () => run(() => setGameStatus(game.id, "finished"));
+  async function finish() {
+    await run(() => setGameStatus(game.id, "finished"));
+    onFinished?.();
+  }
 
   function setDealer(round: Round, pid: string) {
     setDealerOpen(false);
@@ -149,7 +158,6 @@ export function FtnBoard({
           players={sortedPlayers}
           entries={entries}
           config={config}
-          me={me}
           readOnly={finished || viewer}
           save={save}
           run={run}
@@ -185,7 +193,6 @@ export function FtnBoard({
           totalSub={(p) => (totals.played[p.id] ? `${totals.hits[p.id]}/${totals.played[p.id]} ✓` : null)}
           selectedId={finished && !selectedId ? null : (selected?.id ?? null)}
           onSelect={setSelectedId}
-          highlightId={writerId}
           hint={`Punkte, darunter Ansage und ✓/✗. Runde antippen zum Ansehen${viewer || finished ? "" : " oder Korrigieren"}.`}
           cell={(r, p) => {
             const e = entries.find((x) => x.round_id === r.id && x.player_id === p.id);
@@ -263,7 +270,6 @@ function RoundCard({
   players,
   entries,
   config,
-  me,
   readOnly,
   save,
   run,
@@ -277,7 +283,6 @@ function RoundCard({
   players: Player[];
   entries: Entry[];
   config: FtnConfig;
-  me: string | null;
   readOnly: boolean;
   save: SaveFn;
   run: (fn: () => Promise<unknown>) => Promise<void>;
@@ -299,7 +304,8 @@ function RoundCard({
   const bidSum = sumBids(entries, round.id);
   const othersBids = order.filter((p) => p.id !== dealer?.id).map((p) => entry(p.id)?.bid);
   const othersDone = othersBids.every((b) => b != null);
-  const forbidden = config.dealerRule && dealer && othersDone ? forbiddenDealerBid(cards, othersBids as number[]) : null;
+  const editingBids = phase === "bidding" || (phase === "done" && editDone);
+  const forbidden = config.dealerRule && dealer && othersDone && editingBids ? forbiddenDealerBid(cards, othersBids as number[]) : null;
   const dealerViolates = forbidden != null && dealer != null && entry(dealer.id)?.bid === forbidden;
   const allBids = players.length > 0 && players.every((p) => entry(p.id)?.bid != null);
   const diff = bidSum - cards;
@@ -307,6 +313,21 @@ function RoundCard({
   // Spieler, die in dieser Runde angesagt haben (wichtig, falls jemand später dazukommt)
   const bidders = order.filter((p) => entry(p.id)?.bid != null);
   const missingTricks = bidders.some((p) => entry(p.id)?.hit === false && askTricks && entry(p.id)?.tricks == null);
+
+  // Logikprüfung: z. B. können nicht alle richtig liegen, wenn die Ansagen nicht aufgehen
+  const rows = (override?: { pid: string; hit: boolean | null }) =>
+    bidders.map((p) => {
+      const e = entry(p.id)!;
+      return { bid: e.bid, hit: override?.pid === p.id ? override.hit : e.hit, tricks: e.tricks };
+    });
+  const problem = phase === "bidding" ? null : roundProblem(cards, rows(), askTricks);
+  const [blocked, setBlocked] = useState<string | null>(null);
+
+  // Ansage der Reihe nach: links vom Geber beginnend, Geber zuletzt
+  const turn = phase === "bidding" ? nextBidder(order, dealer?.id ?? null, (pid) => entry(pid)?.bid) : null;
+  const turnIdx = turn ? biddingOrder(order, dealer?.id ?? null).findIndex((p) => p.id === turn.id) : -1;
+  const waiting = (p: Player) =>
+    turn != null && biddingOrder(order, dealer?.id ?? null).findIndex((x) => x.id === p.id) > turnIdx;
 
   function confirmBids() {
     patchLocal(round.id, { phase: "playing" });
@@ -326,6 +347,15 @@ function RoundCard({
   function toggleMiss(p: Player) {
     const e = entry(p.id);
     if (!e || e.bid == null) return;
+    setBlocked(null);
+    if (phase === "done") {
+      const next = e.hit === false ? true : false;
+      const err = roundProblem(cards, rows({ pid: p.id, hit: next }), askTricks);
+      if (err) {
+        setBlocked(err);
+        return;
+      }
+    }
     if (phase === "playing") {
       save(round, p, e.hit === false ? { hit: null, tricks: null } : { hit: false });
     } else {
@@ -334,7 +364,7 @@ function RoundCard({
   }
 
   const statusText =
-    phase === "bidding" ? "1 · Stiche ansagen" : phase === "playing" ? "2 · Wer lag daneben? Antippen" : "Runde abgeschlossen";
+    phase === "bidding" ? "Stiche ansagen" : phase === "playing" ? "Wer lag daneben? Antippen" : "Runde abgeschlossen";
 
   return (
     <section className="card p-4 mb-5">
@@ -367,17 +397,23 @@ function RoundCard({
             {order.map((p) => {
               const e = entry(p.id);
               const isDealer = p.id === dealer?.id;
-              const mine = p.user_id != null && p.user_id === me;
+              const wait = !readOnly && waiting(p);
+              const now = !readOnly && turn?.id === p.id;
               return (
-                <li key={p.id} className="flex items-center gap-3 py-2 border-b last:border-b-0" style={{ borderColor: "var(--color-border)" }}>
+                <li
+                  key={p.id}
+                  className="flex items-center gap-3 py-2 border-b last:border-b-0 -mx-2 px-2 rounded-lg transition-opacity"
+                  style={{ borderColor: "var(--color-border)", opacity: wait ? 0.35 : 1, background: now ? "var(--color-surface-soft)" : undefined }}
+                >
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate" style={{ color: p.id === writerId ? "var(--color-accent)" : undefined }}>
+                    <div className="font-semibold truncate">
                       {p.name}
-                      {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
+                      {p.id === writerId && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(Schreiber)</span>}
                     </div>
                     <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
                       {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
-                      {isDealer && forbidden != null && phase === "bidding" && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
+                      {now && <span className="font-semibold" style={{ color: "var(--color-ink)" }}>ist dran</span>}
+                      {isDealer && forbidden != null && <span style={{ color: "var(--color-accent)" }}>nicht {forbidden}</span>}
                     </div>
                   </div>
                   {readOnly ? (
@@ -391,7 +427,8 @@ function RoundCard({
                     <Stepper
                       value={e?.bid ?? null}
                       max={cards}
-                      forbidden={isDealer && phase === "bidding" ? forbidden : null}
+                      forbidden={isDealer ? forbidden : null}
+                      disabled={wait}
                       onChange={(v) => save(round, p, { bid: v })}
                     />
                   )}
@@ -416,9 +453,16 @@ function RoundCard({
             </button>
           )}
           {phase === "done" && editDone && (
-            <button className="btn btn-primary w-full mt-3" onClick={() => setEditDone(false)}>
-              Fertig
-            </button>
+            <>
+              {!dealerViolates && problem && (
+                <p className="text-xs mt-2" style={{ color: "var(--color-accent)" }}>
+                  {problem} Bitte Ansagen oder danach „daneben“ korrigieren.
+                </p>
+              )}
+              <button className="btn btn-primary w-full mt-3" disabled={dealerViolates || !allBids} onClick={() => setEditDone(false)}>
+                Fertig
+              </button>
+            </>
           )}
         </>
       )}
@@ -433,7 +477,6 @@ function RoundCard({
               const hit = e.hit === true;
               const isDealer = p.id === dealer?.id;
               const pts = phase === "done" ? entryPoints(e, config) : null;
-              const mine = p.user_id != null && p.user_id === me;
               return (
                 <li
                   key={p.id}
@@ -447,9 +490,9 @@ function RoundCard({
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate" style={{ color: miss || p.id === writerId ? "var(--color-accent)" : undefined }}>
+                      <div className="font-semibold truncate" style={{ color: miss ? "var(--color-accent)" : undefined }}>
                         {p.name}
-                        {mine && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(du)</span>}
+                        {p.id === writerId && <span className="ml-1 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>(Schreiber)</span>}
                       </div>
                       <div className="text-xs flex gap-1.5 items-center" style={{ color: "var(--color-text-muted)" }}>
                         {isDealer && <span className="chip !py-0 !px-1.5" style={{ background: "var(--color-ink)", color: "white" }}>Geber</span>}
@@ -503,6 +546,11 @@ function RoundCard({
               <p className="text-xs mt-3" style={{ color: "var(--color-text-muted)" }}>
                 Nur antippen, wer <b>falsch</b> lag. Alle anderen zählen beim Abschließen als getroffen.
               </p>
+              {problem && !missingTricks && (
+                <p className="text-xs mt-1 font-semibold" style={{ color: "var(--color-accent)" }}>
+                  {problem}
+                </p>
+              )}
               {missingTricks && (
                 <p className="text-xs mt-1" style={{ color: "var(--color-accent)" }}>
                   Bitte bei allen, die daneben lagen, die tatsächlichen Stiche eintragen.
@@ -512,13 +560,18 @@ function RoundCard({
                 <button className="btn btn-ghost" onClick={editBids}>
                   Ansagen bearbeiten
                 </button>
-                <button className="btn btn-accent" disabled={missingTricks} onClick={closeRound}>
+                <button className="btn btn-accent" disabled={missingTricks || problem != null} onClick={closeRound}>
                   Runde abschließen
                 </button>
               </div>
             </>
           )}
 
+          {phase === "done" && !readOnly && (blocked || problem) && (
+            <p className="text-xs mt-2 font-semibold" style={{ color: "var(--color-accent)" }}>
+              {blocked ?? problem}
+            </p>
+          )}
           {phase === "done" && !readOnly && (
             <div className="flex items-center justify-between mt-3">
               <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
